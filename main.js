@@ -1,21 +1,15 @@
 import { effect } from '@preact/signals-core';
 import { render } from 'lit-html';
-import { createModel, Cmd } from './model.js';
+import { createModel } from './model.js';
 import { view } from './view.js';
-
-const KEYMAP = { ArrowUp: Cmd.UP, ArrowDown: Cmd.DOWN, ArrowLeft: Cmd.LEFT,
-                 ArrowRight: Cmd.RIGHT, ' ': Cmd.STOP };
+import { controllerKeydown, controllerRead } from './controller.js';
 
 const m = createModel();
-let pending = Cmd.NONE;                      // latched key, like KEYPAD bit 7
 
-window.addEventListener('keydown', e => {    // controller_read(), but the browser calls you
-  if (e.key in KEYMAP) { pending = KEYMAP[e.key]; e.preventDefault(); }
-});
+window.addEventListener('keydown', controllerKeydown);  // the browser calls it on each key press
 
 setInterval(() => {                          // the NMI tick
-  m.update(pending);
-  pending = Cmd.NONE;
+  m.update(controllerRead());
 }, 150);
 
 effect(() => render(view(m), document.querySelector('#app')));  // view_update(), only on change

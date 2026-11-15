@@ -43,7 +43,7 @@ Goal: as simple as possible, without saying anything false.
 ## Layout
 
 - `index.html` — page shell: import map, grid CSS, `#app` container.
-- `model.js` — state as signals and `update(cmd)`; `view.js` — lit-html template; `main.js` — keyboard, 150 ms tick, `effect` → `render`.
+- `model.js` — state as signals and `update(cmd)`; `view.js` — lit-html template; `controller.js` — key table, `pending` latch, `controllerKeydown`, `controllerRead`; `main.js` — wiring: `keydown` listener, 150 ms tick, `effect` → `render`.
 - `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is. `.readme-vendor/` — for `README.html`, used as-is: minified marked 18.1.3 and highlight.js 11.11.1, plus VS Code 1.146.0's Markdown preview stylesheets (`vscode-markdown.css`, `vscode-highlight.css` from `extensions/markdown-language-features/media/`).
 - `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, and a `SessionStart` hook that prints `.claude/PROGRESS.md` into context. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
 - `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one (base: the last commit that touched it), then commits.
