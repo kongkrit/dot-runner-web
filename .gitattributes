@@ -30,7 +30,6 @@
 # Vendored libraries are minified onto one long line, so a line diff is unreadable.
 # Still normalised as text; force a diff with `git diff --text`.
 vendor/**   -diff
-.readme-vendor/** -diff
 
 # Binary — never diff or merge
 *.pdf       binary

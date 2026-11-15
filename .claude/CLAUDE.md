@@ -59,14 +59,13 @@ Goal: as simple as possible, without saying anything false.
 - `singleton/` — `model.js` (state as file-level signals, exports `model`), `controller.js` (key table and file-level latch, exports `controller`), `main.js` (wiring into `#app-singleton`).
 - `factory/` — `model.js` (`createModel()`), `controller.js` (`createController()`), `main.js` (creates one of each, wiring into `#app-factory`).
 - `.checks/boundaries.py` — checks the Architecture rules above (stdlib Python); run by the `PostToolUse` hook. `.checks/stop-hook.sh` — the `Stop` hook: runs the same check and refuses to let a turn end while it fails.
-- `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is. `.readme-vendor/` — for `README.html`, used as-is: minified marked 18.1.3 and highlight.js 11.11.1, plus VS Code 1.146.0's Markdown preview stylesheets (`vscode-markdown.css`, `vscode-highlight.css` from `extensions/markdown-language-features/media/`).
+- `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is.
 - `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, a `SessionStart` hook that prints `.claude/PROGRESS.md` into context, a `PostToolUse` hook that runs `.checks/boundaries.py` after every edit (feedback; it cannot undo the edit), and a `Stop` hook (`.checks/stop-hook.sh`) that keeps Claude working until that check passes. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
 - `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one (base: the last commit that touched it), then commits.
 - `.claude/rules/markdown.md` — how to write README.md and docs/: which `##` sections fold, and how. Claude Code loads it by itself when working on those files.
 - `.claude/PROGRESS.md` — latest session handoff only, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`.
 - `.gitignore`, `.gitattributes` — ignore rules; LF line endings and binary file types.
 - `README.md` — human-facing overview. Its Code walkthrough copies each source file in full, so update it in the same change as the file.
-- `README.html` — renders README.md like VS Code's Markdown preview (Dark 2026 / Light 2026 colors, following the system setting), plus sticky expand-all / collapse-all buttons. Needs the Run server.
 
 ## Conventions
 

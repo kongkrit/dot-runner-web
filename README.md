@@ -5,7 +5,7 @@ A small project for learning [Preact Signals](https://github.com/preactjs/signal
 ## Run
 
 <details>
-<summary>Start command, why a server, network exposure, README viewer</summary>
+<summary>Start command, why a server, network exposure</summary>
 <br>
 
 ```bash
@@ -17,7 +17,6 @@ Open <http://localhost:8000>. Arrow keys move both dots, Space stops them. Ctrl+
 - **Why a server:** Chrome refuses to load ES modules (`<script type="module">`) from a `file://` page, so opening `index.html` directly shows the headings but no grids.
 - **Why `--no-project`:** uv skips looking for a `pyproject.toml` and creates no venv. It just runs Python's built-in file server.
 - **Network exposure:** `http.server` listens on every network interface, so other machines on your network can browse this folder, `.git/` included. Add `--bind 127.0.0.1` to keep it to this machine.
-- **README viewer:** <http://localhost:8000/README.html> shows this file rendered, with `[ expand all ]` and `[ collapse all ]` pinned at the top. It looks like VS Code's Markdown preview with the Dark 2026 theme (Light 2026 when your system is in light mode), using [marked](https://github.com/markedjs/marked), [highlight.js](https://highlightjs.org/) and VS Code's own preview stylesheets from `.readme-vendor/`. It needs the server too: a `file://` page cannot `fetch` README.md.
 
 </details>
 
@@ -557,7 +556,7 @@ effect(() => viewUpdate(model, document.querySelector('#app-factory')));  // red
 | `.checks/boundaries.py` | Checks the MVC boundaries in CLAUDE.md's Architecture rules: who may import what; browser globals and `effect` only in `main.js`; signal writes only in `model.js`; `model.update` and `viewUpdate` used only from `main.js`; file-level changing state only in `singleton/`. Run `uv run --no-project python .checks/boundaries.py`. The `PostToolUse` hook runs it after every Edit or Write and tells Claude Code what it broke; it can't undo the edit, and shell edits skip it. |
 | `.checks/stop-hook.sh` | The `Stop` hook: runs the same check when Claude Code tries to finish a turn and, on a violation, sends it back to fix the code first. If the violation survives one round, it lets the turn end but shows you a warning, so it can't loop forever. |
 | `.gitignore` | OS cruft, Python/uv venv, editor files. |
-| `.gitattributes` | LF line endings; binary file types; no line diffs for the minified `vendor/` and `.readme-vendor/` files. |
+| `.gitattributes` | LF line endings; binary file types; no line diffs for the minified `vendor/` files. |
 
 Personal overrides go in `.claude/settings.local.json`, which is gitignored ([settings docs](https://code.claude.com/docs/en/settings)).
 
