@@ -4,7 +4,7 @@ Guidance for Claude Code in this repository.
 
 ## What this is
 
-A **Claude Code template** — a starting point for new projects, not an application. It holds only configuration and documentation files; application code gets added alongside them.
+A small browser app for **learning Preact Signals and lit-html**: a dot moving on a 16×8 grid. Plain ES modules with no npm and no build step; the two libraries are vendored in `vendor/` and loaded through an import map in `index.html`.
 
 ## Code principles
 
@@ -42,24 +42,27 @@ Goal: as simple as possible, without saying anything false.
 
 ## Layout
 
-- `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, and a `SessionStart` hook that prints `PROGRESS.md` into context. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
-- `.claude/commands/wrapup.md` — `/wrapup`: rewrites `PROGRESS.md` as a handoff for the work since the previous one (base: the last commit that touched it), then commits.
+- `index.html` — page shell: import map, grid CSS, `#app` container.
+- `model.js` — state as signals and `update(cmd)`; `view.js` — lit-html template; `main.js` — keyboard, 150 ms tick, `effect` → `render`.
+- `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is.
+- `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, and a `SessionStart` hook that prints `.claude/PROGRESS.md` into context. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
+- `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one (base: the last commit that touched it), then commits.
 - `.claude/rules/markdown.md` — how to write README.md and docs/: which `##` sections fold, and how. Claude Code loads it by itself when working on those files.
-- `PROGRESS.md` — latest session handoff only, maintained by `/wrapup`; earlier ones: `git log -p -- PROGRESS.md`.
+- `.claude/PROGRESS.md` — latest session handoff only, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`.
 - `.gitignore`, `.gitattributes` — ignore rules; LF line endings and binary file types.
 - `README.md` — human-facing overview.
 
 ## Conventions
 
 - **NEVER `git commit` or `git push` on your own.** Do either only when the user's current message asks for it. Exception: `/wrapup` always commits, never pushes.
-- Line endings follow `.gitattributes`: LF by default, CRLF only for the Windows script types it lists.
+- Line endings follow `.gitattributes`: LF for every text file.
 - New languages or toolchains extend `.gitignore` and `.gitattributes` — no parallel ignore files. Keep new entries consistent with existing ones.
 - **Read first, edit once, check once.** Before changing anything, list every file the change touches and read them in one pass. Then make all the edits, then run whatever verifies them once. Don't loop read, edit, rerun per file. If a check fails, fix it and rerun that check.
-- As the template becomes a real project, add build, test, and run commands here.
+- **Run:** `uv run --no-project python -m http.server 8000`, then open http://localhost:8000. No build step and no tests yet.
 
 ## Development environment
 
-- **Debian 13 (trixie)** with `docker` installed. Base tooling via `apt`: `git`, `gh`, `python3`, `python3-dev`, `build-essential`, `curl`, `jq`, `wget`; plus `uv` from its standalone installer into `~/.local/bin` (commands in the [README](README.md#development-setup-debian-13)).
+- **Debian 13 (trixie)** with `docker` installed. Base tooling via `apt`: `git`, `gh`, `python3`, `python3-dev`, `build-essential`, `curl`, `jq`, `wget`; plus `uv` from its standalone installer into `~/.local/bin` (commands in the [README](../README.md#development-setup-debian-13)).
 - **Install missing tools yourself:** `sudo apt install -y <package>` (`sudo apt update` first if not found). Use `apt` for system tools only. If the project will keep relying on a new tool, add it to the README's install command.
 - **Python: use `uv` only.** Never run `pip`, `pip3`, `python3 -m pip`, `python3 -m venv`, or `pipx`; `uv pip …` is uv's own subcommand and is fine. uv handles both venvs and installs, and Debian 13 blocks system-wide `pip install` anyway (PEP 668). One venv per project:
 
@@ -68,4 +71,4 @@ Goal: as simple as possible, without saying anything false.
   uv venv && uv pip install -r requirements.txt    # requirements.txt-only project
   uv run <cmd>                                     # run a command in the project venv
   ```
-- `node`/`npm` and .NET are not used; serve static content with `python3 -m http.server`. Multi-arch Docker builds need a one-time QEMU + buildx setup (see README).
+- `node`/`npm` and .NET are not used; serve the page with the Run command above. Multi-arch Docker builds need a one-time QEMU + buildx setup (see README).

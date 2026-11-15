@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dot runner</title>
+  <script type="importmap">
+  { "imports": {
+      "lit-html": "./vendor/lit-html.js",
+      "@preact/signals-core": "./vendor/signals-core.mjs"
+  } }
+  </script>
+  <style>
+    .matrix { border-collapse: collapse; background: #111; }
+    .matrix td { width: 20px; height: 20px; border: 1px solid #333; }
+    .matrix td.on { background: #f33; }
+    output { font: 2em monospace; }
+  </style>
+</head>
+<body>
+  <p>Arrow keys move, Space stops.</p>
+  <div id="app"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

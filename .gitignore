@@ -25,36 +25,10 @@ $RECYCLE.BIN/
 .Trash-*
 .nfs*
 
-# Python / Jupyter
+# Python (uv)
 __pycache__/
 *.py[cod]
-*.pyo
-.ipynb_checkpoints/
-*.egg-info/
-build/
-dist/
-*.egg
-.eggs/
 .venv/
-venv/
-env/
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-dist/
-build/
-.next/
-out/
-.cache/
-
-# R
-.Rhistory
-.RData
-.Rproj.user/
 
 # Editor / IDE
 .vscode/settings.json

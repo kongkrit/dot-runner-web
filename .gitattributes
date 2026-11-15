@@ -20,9 +20,14 @@
 *.ipynb     text eol=lf
 *.sh        text eol=lf
 *.js        text eol=lf
+*.mjs       text eol=lf
 *.ts        text eol=lf
 *.jsx       text eol=lf
 *.tsx       text eol=lf
+
+# Vendored libraries are minified onto one long line, so a line diff is unreadable.
+# Still normalised as text; force a diff with `git diff --text`.
+vendor/**   -diff
 
 # Binary — never diff or merge
 *.pdf       binary
