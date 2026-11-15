@@ -12,9 +12,9 @@
   <style>
     body { background: #333; color: #eee; }
     .matrix { border-collapse: collapse; background: #111; }
-    .matrix td { width: 20px; height: 20px; border: 1px solid #333; }
+    .matrix td { width: 15px; height: 15px; border: 1px solid #333; }
     .matrix td.on { background: #f33; }
-    output { font: 2em monospace; }
+    output { font: 1.5em monospace; }
   </style>
 </head>
 <body>
@@ -23,7 +23,10 @@
   <div id="app-singleton"></div>
   <h2>factory</h2>
   <div id="app-factory"></div>
+  <h2>mixed</h2>
+  <div id="app-mixed"></div>
   <script type="module" src="./singleton/main.js"></script>
   <script type="module" src="./factory/main.js"></script>
+  <script type="module" src="./mixed/main.js"></script>
 </body>
 </html>

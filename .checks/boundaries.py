@@ -37,10 +37,13 @@ RULES = [
     (r"\.update\b|\[\s*['\"]update['\"]\s*\]", {"*/main.js"}, "only main.js uses model.update"),
     # let/var, or a const holding an array, object or new instance (Object.freeze(...) is fine)
     (r"^(?:export\s+)?(?:let|var)\b|^(?:export\s+)?const\s+[\w$]+\s*=\s*(?:\[|\{|new\b)",
-     {"*/main.js", "singleton/*"},
-     "file-level changing state only in singleton/ (factory parts keep it inside the factory)"),
+     {"*/main.js", "singleton/*", "mixed/controller.js"},
+     "file-level changing state only in singleton/ and mixed/controller.js (factory parts keep it inside the factory)"),
     (r"\bviewUpdate\b", {"view.js", "*/main.js"}, "only main.js uses viewUpdate"),
 ]
+
+# Deliberate copies that must stay byte-identical (the README walkthrough only points to the original).
+COPIES = {"mixed/model.js": "factory/model.js", "mixed/controller.js": "singleton/controller.js"}
 
 # import ... from 'x', export ... from 'x', import 'x', import('x')
 IMPORTS = re.compile(r"""\b(?:import|export)\b[^'";]*?\bfrom\s*['"]([^'"]+)['"]"""
@@ -81,6 +84,9 @@ def check(file):
 files = sorted(p for p in ROOT.rglob("*.js")
                if not any(part.startswith(".") or part == "vendor" for part in p.relative_to(ROOT).parts))
 problems = [p for f in files for p in check(f)]
+for copy, original in COPIES.items():
+    if (ROOT / copy).exists() and (ROOT / copy).read_bytes() != (ROOT / original).read_bytes():
+        problems.append(f"{copy}:1: must stay identical to {original} (keep the copies in step)")
 if problems:
     print("\n".join(problems), file=sys.stderr)
     sys.exit(1)
