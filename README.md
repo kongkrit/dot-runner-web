@@ -51,7 +51,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 ### Terms
 
 <details>
-<summary>semantic HTML, singleton, factory, DOM, import map, arrow keys, div, table, Object.freeze, closure, signal, computed, effect, html, container, render</summary>
+<summary>semantic HTML, singleton, factory, DOM, import map, arrow keys, div, span, table, Object.freeze, closure, signal, computed, effect, html, container, render</summary>
 <br>
 
 - **semantic HTML**: choosing the element whose name says what the content is, such as `<p>` for a paragraph, `<table>` for rows and columns, or `<output>` for a computed result, rather than a generic box made to look right. Screen readers, search engines and browser features rely on that meaning; the look comes from CSS either way.
@@ -62,7 +62,8 @@ The code is split the way an embedded C program often is: a model (state plus th
 - **import map** (browser): a JSON block in the page that tells the browser which file a bare module name such as `lit-html` means. In an npm project a bundler does this job.
 - **ArrowUp, ArrowDown, ArrowLeft, ArrowRight** (browser): the values the browser puts in a key event's `key` field when an arrow key is pressed. `controller.js` uses them as the keys of its `KEYMAP` table.
   ***
-- **div** (HTML): a generic box with no meaning of its own, the opposite of semantic. It groups things or gives CSS and JavaScript something to find.
+- **div** (HTML): a generic box with no meaning of its own, the opposite of semantic. It groups things or gives CSS and JavaScript something to find. It is a *block* element: it starts on its own line, takes the full width, and may contain almost anything, tables included. The three app containers are `<div>`s.
+- **span** (HTML): the *inline* counterpart of `div`, just as meaningless but flowing inside a line of text like a word. It may contain only text and other inline elements (`<b>`, `<code>`, `<output>`), never blocks such as `<div>` or `<table>`. Use a `div` to group blocks and a `span` to mark a few words or a value inside a line. lit-html's `render` can draw into either; the browser does not stop a `<table>` inside a `<span>`, but that is invalid HTML.
 - **table, tr, td** (HTML): a table, a row in it (*table row*), and a cell in a row (*table data*). Here 8 `<tr>` of 16 `<td>` each make the grid.
   ***
 - **Object.freeze** (JS): a function built into JavaScript that locks an object: afterwards its fields cannot be changed, added or deleted, and it cannot be unfrozen. It is shallow (an object stored in a field stays changeable) and does not stop the variable from being pointed at another object; declaring it with `const` does that. In a module (a file loaded with `import` or `<script type="module">`), which always runs in *strict mode*, the mode that turns silent failures into errors, a write to a frozen object throws a `TypeError`; in a classic script without `"use strict"` the same write silently does nothing.
