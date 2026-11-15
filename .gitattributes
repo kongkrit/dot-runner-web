@@ -14,6 +14,8 @@
 *.html      text eol=lf
 
 # Code
+*.h         text eol=lf
+*.c         text eof=lf
 *.py        text eol=lf
 *.r         text eol=lf
 *.R         text eol=lf
