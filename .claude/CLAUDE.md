@@ -16,6 +16,17 @@ Code is simple, minimal, easy to understand, and DRY. These come before cleverne
 - **DRY:** one source of truth for each piece of logic, data, and config. Search for existing code to reuse before writing new code; never copy-paste logic. Extract it once instead.
 - **When in doubt, choose the simpler option.** Before finishing, re-read your diff and cut anything that isn't needed.
 
+## Architecture rules
+
+The app is split like the bare-metal C original in `C/`: model, view, controller, and a main that wires them. These boundaries are checked by `.checks/boundaries.py`, which a `PostToolUse` hook runs after every edit; run it by hand with `uv run --no-project python .checks/boundaries.py`.
+
+- **Roles:** `model.js` holds the state and the only rule that changes it, `update(cmd)`. `view.js` draws the state once per call (`viewUpdate`). `controller.js` turns key presses into commands. `main.js` creates the parts, connects them to the browser, and decides when things run: the key listener, the tick, and the redraw `effect`.
+- **Imports go one way:** model → `@preact/signals-core`; view → `lit-html`, `./model.js`; controller → `./model.js`; main → `@preact/signals-core`, `./model.js`, `./view.js`, `./controller.js`. Nothing imports `main.js`.
+- **Browser globals** (`window`, `document`, `navigator`, `localStorage`, `fetch`, `setTimeout`, `setInterval`) appear only in `main.js`. Other parts get what they need passed in: the key event, the container element.
+- **State changes only through `m.update(cmd)`:** only `model.js` writes `.value`; only `main.js` calls `.update(` and creates `effect`s; `viewUpdate` is called only inside an `effect(...)` in `main.js`, on one line, so the screen never goes stale.
+- **Parts are factories:** model, view, and controller keep no changing state at file level (no top-level `let` or `var`; constant tables are frozen). `main.js` creates the instances with `createModel()` and `createController()`.
+- **New root-level `.js` file:** add it to `ALLOWED_IMPORTS` in `.checks/boundaries.py` (and to these rules) before using it; the check rejects files it doesn't know.
+
 ## How to explain things
 
 These rules apply to explanations to the user and to code comments, not to commit messages.
@@ -43,9 +54,10 @@ Goal: as simple as possible, without saying anything false.
 ## Layout
 
 - `index.html` — page shell: import map, grid CSS, `#app` container.
-- `model.js` — state as signals and `update(cmd)`; `view.js` — lit-html template; `controller.js` — key table, `pending` latch, `controllerKeydown`, `controllerRead`; `main.js` — wiring: `keydown` listener, 150 ms tick, `effect` → `render`.
+- `model.js` — state as signals and `update(cmd)`; `view.js` — lit-html template, `viewUpdate(m, container)`; `controller.js` — key table, `createController()` with `keydown` and `read`; `main.js` — wiring: creates model and controller, `keydown` listener, 150 ms tick, `effect` → `viewUpdate`.
+- `.checks/boundaries.py` — checks the Architecture rules above (stdlib Python); run by the `PostToolUse` hook.
 - `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is. `.readme-vendor/` — for `README.html`, used as-is: minified marked 18.1.3 and highlight.js 11.11.1, plus VS Code 1.146.0's Markdown preview stylesheets (`vscode-markdown.css`, `vscode-highlight.css` from `extensions/markdown-language-features/media/`).
-- `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, and a `SessionStart` hook that prints `.claude/PROGRESS.md` into context. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
+- `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, a `SessionStart` hook that prints `.claude/PROGRESS.md` into context, and a `PostToolUse` hook that runs `.checks/boundaries.py` after every edit. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
 - `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one (base: the last commit that touched it), then commits.
 - `.claude/rules/markdown.md` — how to write README.md and docs/: which `##` sections fold, and how. Claude Code loads it by itself when working on those files.
 - `.claude/PROGRESS.md` — latest session handoff only, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`.

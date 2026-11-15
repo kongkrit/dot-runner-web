@@ -35,9 +35,9 @@ The code is split the way an embedded C program often is: a model (state plus th
 |------|------|
 | `index.html` | Page shell: the import map, the grid's CSS, and the empty `#app` container. |
 | `model.js` | State and update rule: `row` and `col` signals, a `hex` computed, `update(cmd)`. No DOM. |
-| `view.js` | `view(m)`: a lit-html template for the 16×8 table and the hex readout. Reads signals, writes none. |
-| `controller.js` | Input: `controllerKeydown(e)` latches a key in `pending`; `controllerRead()` hands the tick the latest key and clears it. |
-| `main.js` | Wiring: `keydown` → `controllerKeydown`, a 150 ms timer → `m.update(controllerRead())`, `effect` → `render`. |
+| `view.js` | `viewUpdate(m, container)`: renders a lit-html template of the 16×8 table and the hex readout into the container. Reads signals, writes none. |
+| `controller.js` | Input: `createController()` returns `keydown(e)`, which latches a key in `pending`, and `read()`, which hands the tick the latest key and clears it. |
+| `main.js` | Wiring: creates the model and controller; `keydown` → `ctrl.keydown`, a 150 ms timer → `m.update(ctrl.read())`, `effect` → `viewUpdate`. |
 | `vendor/` | lit-html 3.3.3 (`lit-html.js`) and @preact/signals-core 1.14.5 (`dist/signals-core.mjs`), the published files used as-is. |
 
 </details>
@@ -75,10 +75,10 @@ The code is split the way an embedded C program often is: a model (state plus th
 <summary>Key press, tick, write, redraw, hex packing</summary>
 <br>
 
-1. **Key press.** The browser calls `controllerKeydown` (in `controller.js`, registered in `main.js`), which stores the command in `pending`. The browser pushes events rather than waiting to be polled, so the key waits in `pending` until the next tick reads it. If two keys arrive within one tick, the last one wins.
-2. **Tick.** Every 150 ms (about 6.7 steps per second) `setInterval` calls `m.update(controllerRead())`; `controllerRead` returns `pending` and clears it. `update` remembers the last real command in a plain variable `cmd`, so the dot keeps moving with no key held. `cmd` is not a signal because nothing on screen shows it. Edges wrap: from column 15, RIGHT goes to column 0.
+1. **Key press.** The browser calls `ctrl.keydown` (the controller's method, registered in `main.js`), which stores the command in the controller's `pending` latch. The browser pushes events rather than waiting to be polled, so the key waits in `pending` until the next tick reads it. If two keys arrive within one tick, the last one wins.
+2. **Tick.** Every 150 ms (about 6.7 steps per second) `setInterval` calls `m.update(ctrl.read())`; `read` returns `pending` and clears it. `update` remembers the last real command in a plain variable `cmd`, so the dot keeps moving with no key held. `cmd` is not a signal because nothing on screen shows it. Edges wrap: from column 15, RIGHT goes to column 0.
 3. **Write.** `update` writes a new value to `col` or `row`. After Space, it writes nothing, so nothing re-renders.
-4. **Redraw.** On its last run the effect in `main.js` read `row`, `col` and `hex` (through `view`), so it re-runs `render(view(m), #app)`. `view(m)` rebuilds the whole description: 128 cells. `render` then changes only what differs, which for one step is the `class` of two `<td>` cells and the `<output>` text. The saving is in DOM work, not in JavaScript work.
+4. **Redraw.** On its last run the effect in `main.js` read `row`, `col` and `hex` (through `viewUpdate`), so it re-runs `viewUpdate(m, #app)`. Its `template(m)` rebuilds the whole description: 128 cells. `render` then changes only what differs, which for one step is the `class` of two `<td>` cells and the `<output>` text. The saving is in DOM work, not in JavaScript work.
 
 The readout packs the position into one byte: `hex = (row << 4) | col`. Column 0–15 fills the low 4 bits and row 0–7 the next 3, so the range is `00`–`7F`. Example: the start position, row 4 and column 7, gives `(4 << 4) | 7 = 0x40 | 0x07 = 0x47`, shown as `47`.
 
@@ -203,7 +203,7 @@ export function createModel() {
 }
 ```
 
-- `update(c) { … }` is the model's one entry point for change, called by the tick in `main.js` as `m.update(controllerRead())`; `c` is the new command, or `Cmd.NONE` if no key came this tick. **The syntax is shorthand for `update: function (c) { … }`**, a field whose value is a function, much like a function pointer in a C struct. The difference: this function carries the variables it closed over, the names it uses but does not declare, found in `createModel`: `row`, `col` and `cmd`. So it needs no context argument, and it is the only code that writes them.
+- `update(c) { … }` is the model's one entry point for change, called by the tick in `main.js` as `m.update(ctrl.read())`; `c` is the new command, or `Cmd.NONE` if no key came this tick. **The syntax is shorthand for `update: function (c) { … }`**, a field whose value is a function, much like a function pointer in a C struct. The difference: this function carries the variables it closed over, the names it uses but does not declare, found in `createModel`: `row`, `col` and `cmd`. So it needs no context argument, and it is the only code that writes them.
 - `if (c !== Cmd.NONE) cmd = c`: `!==` compares without converting types. Loose `!=` converts first, so `'1' != 1` is `false`; the strict form avoids such surprises.
 - `switch (cmd)` works as in C, `break` included, and a value that matches no `case` does nothing, also as in C.
 - STOP has no `case`, on purpose. Space puts `Cmd.STOP` in `pending`. On the next tick `update(Cmd.STOP)` stores it in `cmd`, since it is not `NONE`. The `switch` then finds no match, so `update` writes neither signal: the effect in `main.js` is not notified and the page is not redrawn. On the ticks after that `c` is `NONE`, so `cmd` stays `STOP` and the dot stays put until an arrow key replaces it.
@@ -215,18 +215,18 @@ export function createModel() {
 ### `view.js`
 
 <details>
-<summary>Imports, range helper, tagged templates, rows and cells, class slot, hex text</summary>
+<summary>Imports, range helper, tagged templates, rows and cells, class slot, hex text, viewUpdate</summary>
 <br>
 
-Library names: **`html`** (lit-html), **`.value`** (Preact). Inside an **`html`** template, each `${…}` is a slot that lit-html fills.
+Library names: **`html`** and **`render`** (lit-html), **`.value`** (Preact). Inside an **`html`** template, each `${…}` is a slot that lit-html fills.
 
 ```js
-import { html } from 'lit-html';
+import { html, render } from 'lit-html';
 import { WIDTH, HEIGHT } from './model.js';
 ```
 
-- **`html`** is lit-html's template tag, explained below. `WIDTH` and `HEIGHT` come from `./model.js`: a path starting with `./` is relative to this file.
-- lit-html 3.3.3 exports more: **`render`** (used in `main.js`); **`svg`** and **`mathml`**, template tags like `html` for SVG graphics and MathML math markup; **`nothing`**, a value that renders as empty; and **`noChange`**, a value that leaves a slot as it was, used mostly when writing directives (add-ons that control how a slot updates). It also exports `_$LH`, which is internal to Lit's own packages. The [Templates API page](https://lit.dev/docs/api/templates/) documents `html`, `svg`, `render` and `nothing`; the [lit-html 3.3.3 declaration file](https://cdn.jsdelivr.net/npm/lit-html@3.3.3/lit-html.d.ts) lists every export, types included. lit.dev writes imports as `from 'lit'`; the `lit` package re-exports `lit-html`, so the names are the same. Ready-made directives such as `repeat` live in separate `lit-html/directives/…` files, which this project has not vendored.
+- **`html`** is lit-html's template tag and **`render`** writes a template into the page; both are explained below. `WIDTH` and `HEIGHT` come from `./model.js`: a path starting with `./` is relative to this file. This is the only file that imports lit-html.
+- lit-html 3.3.3 exports more than `html` and `render`: **`svg`** and **`mathml`**, template tags like `html` for SVG graphics and MathML math markup; **`nothing`**, a value that renders as empty; and **`noChange`**, a value that leaves a slot as it was, used mostly when writing directives (add-ons that control how a slot updates). It also exports `_$LH`, which is internal to Lit's own packages. The [Templates API page](https://lit.dev/docs/api/templates/) documents `html`, `svg`, `render` and `nothing`; the [lit-html 3.3.3 declaration file](https://cdn.jsdelivr.net/npm/lit-html@3.3.3/lit-html.d.ts) lists every export, types included. lit.dev writes imports as `from 'lit'`; the `lit` package re-exports `lit-html`, so the names are the same. Ready-made directives such as `repeat` live in separate `lit-html/directives/…` files, which this project has not vendored.
 
 ```js
 const range = n => [...Array(n).keys()];
@@ -235,7 +235,7 @@ const range = n => [...Array(n).keys()];
 - `const range = n => [...Array(n).keys()]` returns `[0, 1, …, n−1]`. `Array(n)` makes an array of `n` empty places, `.keys()` walks its indexes, and `[...]` collects them into a new array. Example: `range(3)` is `[0, 1, 2]`.
 
 ```js
-export const view = m => html`
+const template = m => html`
   <table class="matrix">
     ${range(HEIGHT).map(r => html`<tr>
       ${range(WIDTH).map(c => html`<td class=${r === m.row.value && c === m.col.value ? 'on' : ''}></td>`)}
@@ -244,18 +244,26 @@ export const view = m => html`
   <output>${m.hex.value.toString(16).toUpperCase().padStart(2, '0')}</output>`;
 ```
 
-- `` export const view = m => html`…` `` is a function from the model to a description of the page. It reads signals and writes none.
-- `` html`…` `` is a tagged template literal. A template literal is a string in backticks where `${expr}` inserts the value of any JavaScript expression. With a function name in front, the tag, JavaScript builds no string: it calls the function with the fixed text pieces and the `${…}` values separately. **`html`** keeps the pieces as the template and each value as a slot. The pieces array is the same object each time a given template in the source runs, which is how **`render`** in `main.js` recognizes the last frame's template and fills its slots instead of rebuilding it.
+- `` const template = m => html`…` `` is a function from the model to a description of the page. It reads signals and writes none. It is not exported: other files draw through `viewUpdate` below.
+- `` html`…` `` is a tagged template literal. A template literal is a string in backticks where `${expr}` inserts the value of any JavaScript expression. With a function name in front, the tag, JavaScript builds no string: it calls the function with the fixed text pieces and the `${…}` values separately. **`html`** keeps the pieces as the template and each value as a slot. The pieces array is the same object each time a given template in the source runs, which is how **`render`** (below) recognizes the last frame's template and fills its slots instead of rebuilding it.
 - `` range(HEIGHT).map(r => html`<tr>…</tr>`) ``: `.map` calls the function on each element and returns a new array of the results, here 8 row templates of 16 cell templates each. An array in a slot renders its items in order, matched to the last frame's items by position. The counts never change, so every cell is reused.
-- `class=${r === m.row.value && c === m.col.value ? 'on' : ''}` is an attribute slot: it sets the cell's `class` to `on` or to nothing, and the `.matrix td.on` rule in `index.html` paints it red. `===` is strict equality, and `? :` is the same as in C. These **`.value`** reads are what subscribe the effect in `main.js`.
+- `class=${r === m.row.value && c === m.col.value ? 'on' : ''}` is an attribute slot: it sets the cell's `class` to `on` or to nothing, and the `.matrix td.on` rule in `index.html` paints it red. `===` is strict equality, and `? :` is the same as in C. These **`.value`** reads are what subscribe the effect in `main.js`, because `viewUpdate` runs inside it.
 - `<output>${m.hex.value.toString(16).toUpperCase().padStart(2, '0')}</output>`: `<output>` is the semantic element for a computed result. The chain does what `printf("%02X", hex)` does in C: base-16 text, upper case, padded to two characters with `0`. Example: row 0, column 10 gives 10 → `a` → `A` → `0A`.
+
+```js
+export function viewUpdate(m, container) {   // view_update()
+  render(template(m), container);
+}
+```
+
+- `export function viewUpdate(m, container)` draws the model into `container` once and returns: **`render`** writes `template(m)` there, and on later calls changes only what differs from the last frame. It is the only name other files see, so lit-html stays a detail of this file, and swapping the view library would touch nothing else. Redrawing on every change is not its job: `main.js` calls it inside an `effect`.
 
 </details>
 
 ### `controller.js`
 
 <details>
-<summary>Command import, key table, pending key, controllerKeydown, controllerRead</summary>
+<summary>Command import, key table, createController, keydown, read</summary>
 <br>
 
 Library names: none.
@@ -267,88 +275,93 @@ import { Cmd } from './model.js';
 - The commands are the message from the controller to the model, so they are defined once, in `model.js`, and imported here.
 
 ```js
-const KEYMAP = { ArrowUp: Cmd.UP, ArrowDown: Cmd.DOWN, ArrowLeft: Cmd.LEFT,
-                 ArrowRight: Cmd.RIGHT, ' ': Cmd.STOP };
+const KEYMAP = Object.freeze({ ArrowUp: Cmd.UP, ArrowDown: Cmd.DOWN, ArrowLeft: Cmd.LEFT,
+                               ArrowRight: Cmd.RIGHT, ' ': Cmd.STOP });
 ```
 
-- `const KEYMAP = { ArrowUp: Cmd.UP, … }` is a table from key names to commands, looked up as `KEYMAP[e.key]`. The keys are the names the browser gives keys; Space is `' '`.
+- `const KEYMAP = Object.freeze({ ArrowUp: Cmd.UP, … })` is a table from key names to commands, looked up as `KEYMAP[e.key]`, and frozen like `Cmd` because it never changes. The keys are the names the browser gives keys; Space is `' '`.
 
 ```js
-let pending = Cmd.NONE;                      // latched key, like KEYPAD bit 7
+export function createController() {
+  let pending = Cmd.NONE;                    // latched key, like KEYPAD bit 7
+  return {
 ```
 
-- `let pending = Cmd.NONE` is a one-slot mailbox from the keyboard to the timer; [How it works](#how-it-works), step 1, explains why a key waits here. It is not exported, so no other file can touch it, like a file-scope `static` in C.
+- `export function createController()` is a factory, like `createModel`: each call returns a new controller with its own `pending` latch, a one-slot mailbox from the keyboard to the timer; [How it works](#how-it-works), step 1, explains why a key waits here. `pending` is local to the call, so nothing outside the controller can touch it, and two controllers never share one. The only thing at file level is the frozen `KEYMAP`.
+- `return {` starts the controller object, which has two methods, `keydown` and `read`.
 
 ```js
-export function controllerKeydown(e) {       // the keypad latching a key
-  if (e.key in KEYMAP) { pending = KEYMAP[e.key]; e.preventDefault(); }
-}
+    keydown(e) {                             // the keypad latching a key
+      if (e.key in KEYMAP) { pending = KEYMAP[e.key]; e.preventDefault(); }
+    },
 ```
 
-- `export function controllerKeydown(e)` is the function `main.js` hands to the browser for key presses. `e` is the key event object, and `e.key` names the key.
+- `keydown(e)` is the method `main.js` hands to the browser for key presses. `e` is the key event object, and `e.key` names the key. It reaches `pending` through the closure, so it still works when handed over on its own, detached from the controller object, as `ctrl.keydown`.
 - `e.key in KEYMAP` is true when the table has that key. `e.preventDefault()` cancels the browser's own action for the key; arrows and Space would otherwise scroll the page. It runs only for mapped keys, so shortcuts such as F5 still work.
 
 ```js
-export function controllerRead() {           // controller_read(): the latched key, or NONE
-  const c = pending;
-  pending = Cmd.NONE;
-  return c;
+    read() {                                 // controller_read(): the latched key, or NONE
+      const c = pending;
+      pending = Cmd.NONE;
+      return c;
+    },
+  };
 }
 ```
 
-- `controllerRead()` returns the latched command and empties the latch, so each key press reaches the model once; on a tick with no new key it returns `Cmd.NONE`. The tick in `main.js` calls it as `m.update(controllerRead())`.
-- The browser runs JavaScript on one thread, from a queue of events such as key presses and timer ticks, and each callback finishes before the next starts. So `controllerKeydown` and the tick never interrupt each other, and the read-then-clear in `controllerRead` needs no lock, `volatile` or disabled interrupts, unlike a variable shared with an interrupt handler.
+- `read()` returns the latched command and empties the latch, so each key press reaches the model once; on a tick with no new key it returns `Cmd.NONE`. The tick in `main.js` calls it as `m.update(ctrl.read())`. The last two lines close the controller object and `createController`.
+- The browser runs JavaScript on one thread, from a queue of events such as key presses and timer ticks, and each callback finishes before the next starts. So `keydown` and the tick never interrupt each other, and the read-then-clear in `read` needs no lock, `volatile` or disabled interrupts, unlike a variable shared with an interrupt handler.
 
 </details>
 
 ### `main.js`
 
 <details>
-<summary>Imports, the model, key listener, timer tick, redraw effect</summary>
+<summary>Imports, model and controller, key listener, timer tick, redraw effect</summary>
 <br>
 
-Library names: **`effect`** (Preact), **`render`** (lit-html).
+Library names: **`effect`** (Preact).
 
 ```js
 import { effect } from '@preact/signals-core';
-import { render } from 'lit-html';
 ```
 
-- **`effect`** and **`render`** come from the two libraries, imported by bare name as in `model.js` and `view.js`.
+- **`effect`** comes from Preact, imported by bare name as in `model.js`. lit-html is not imported here: drawing is `view.js`'s business.
 
 ```js
 import { createModel } from './model.js';
-import { view } from './view.js';
-import { controllerKeydown, controllerRead } from './controller.js';
+import { viewUpdate } from './view.js';
+import { createController } from './controller.js';
 ```
 
-- This project's own pieces, all covered above: `createModel` from `model.js`, `view` from `view.js`, and `controllerKeydown` and `controllerRead` from `controller.js`.
+- This project's own pieces, all covered above: `createModel` from `model.js`, `viewUpdate` from `view.js`, and `createController` from `controller.js`.
 
 ```js
 const m = createModel();
+const ctrl = createController();
 ```
 
-- `const m = createModel()` builds the one model.
+- `const m = createModel()` and `const ctrl = createController()` build the one model and the one controller. This is the only file that creates parts; the other files only define them.
 
 ```js
-window.addEventListener('keydown', controllerKeydown);  // the browser calls it on each key press
+window.addEventListener('keydown', ctrl.keydown);  // the browser calls it on each key press
 ```
 
-- `window.addEventListener('keydown', controllerKeydown)` asks the browser to call `controllerKeydown` on every key press, passing it the key event. The function is passed by name, the way C passes a function pointer. This file makes every connection to the browser (key events, the timer, drawing); the other files only define things.
+- `window.addEventListener('keydown', ctrl.keydown)` asks the browser to call the controller's `keydown` on every key press, passing it the key event. The function is passed by name, the way C passes a function pointer. This file makes every connection to the browser (key events, the timer, the page element); the other files never touch it.
 
 ```js
 setInterval(() => {                          // the NMI tick
-  m.update(controllerRead());
+  m.update(ctrl.read());
 }, 150);
 ```
 
-- `setInterval(() => { … }, 150)` queues a tick every 150 ms. Each tick asks the controller for the latest key and hands it to the model. The timer cannot preempt: if other code is running, the tick waits its turn. Browsers also slow timers in a hidden tab to at most once per second, so the dot crawls while you look at another tab.
+- `setInterval(() => { … }, 150)` queues a tick every 150 ms. Each tick asks the controller for the latest key (`ctrl.read()`) and hands it to the model. The timer cannot preempt: if other code is running, the tick waits its turn. Browsers also slow timers in a hidden tab to at most once per second, so the dot crawls while you look at another tab.
 
 ```js
-effect(() => render(view(m), document.querySelector('#app')));  // view_update(), only on change
+effect(() => viewUpdate(m, document.querySelector('#app')));  // redraw only on change
 ```
 
-- `effect(() => render(view(m), document.querySelector('#app')))` ties it together. **`effect`** runs its function once straight away, which draws the first frame. `view(m)` reads `row`, `col` and `hex`, so the effect is now subscribed to them. **`render`** writes the description into the element that `document.querySelector('#app')` finds with the CSS selector `#app`. Later, a write such as `col.value = …` inside `update` re-runs the effect before the assignment completes, so the page is already redrawn when `update` returns.
+- `effect(() => viewUpdate(m, document.querySelector('#app')))` ties it together. **`effect`** runs its function once straight away, so `viewUpdate` draws the first frame into the element that `document.querySelector('#app')` finds with the CSS selector `#app`. While drawing, the view reads `row`, `col` and `hex`, so the effect is now subscribed to them. Later, a write such as `col.value = …` inside `update` re-runs the effect before the assignment completes, so the page is already redrawn when `update` returns.
 
 </details>
 
@@ -361,10 +374,11 @@ effect(() => render(view(m), document.querySelector('#app')));  // view_update()
 | File | Purpose |
 |------|---------|
 | `.claude/CLAUDE.md` | Project instructions Claude Code loads every session: code principles, explanation style, conventions, environment. |
-| `.claude/settings.json` | Claude Code settings (`model: opus`, `effortLevel: xhigh`), a permission allowlist, and a `SessionStart` hook that prints `.claude/PROGRESS.md` into context. |
+| `.claude/settings.json` | Claude Code settings (`model: opus`, `effortLevel: xhigh`), a permission allowlist, a `SessionStart` hook that prints `.claude/PROGRESS.md` into context, and a `PostToolUse` hook that runs `.checks/boundaries.py` after every edit. |
 | `.claude/skills/wrapup/SKILL.md` | `/wrapup` rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one, then commits. It runs only when you type it. |
 | `.claude/rules/markdown.md` | How to write README.md and docs/: which `##` sections fold. Claude Code loads it when working on those files. |
 | `.claude/PROGRESS.md` | Latest session handoff, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`. |
+| `.checks/boundaries.py` | Checks the MVC boundaries in CLAUDE.md's Architecture rules: who may import what, browser globals only in `main.js`, state changes only through `m.update`, no file-level changing state in the parts. Run `uv run --no-project python .checks/boundaries.py`; the hook above also runs it after every edit and tells Claude Code what it broke. |
 | `.gitignore` | OS cruft, Python/uv venv, editor files. |
 | `.gitattributes` | LF line endings; binary file types; no line diffs for the minified `vendor/` and `.readme-vendor/` files. |
 

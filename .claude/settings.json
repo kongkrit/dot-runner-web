@@ -7,6 +7,14 @@
           { "type": "command", "command": "cat \"$CLAUDE_PROJECT_DIR/.claude/PROGRESS.md\" 2>/dev/null || true" }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "uv run --no-project python \"$CLAUDE_PROJECT_DIR/.checks/boundaries.py\" >/dev/null || exit 2" }
+        ]
+      }
     ]
   },
   "permissions": {
