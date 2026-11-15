@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>README</title>
+  <!-- VS Code's own Markdown preview stylesheets (VS Code 1.146.0), used as-is.
+       They read the --vscode-* colors below and the vscode-dark / vscode-light class. -->
+  <link rel="stylesheet" href=".readme-vendor/vscode-markdown.css">
+  <link rel="stylesheet" href=".readme-vendor/vscode-highlight.css">
+  <style>
+    /* Colors from VS Code's "Dark 2026" and "Light 2026" themes. */
+    .vscode-dark {
+      color-scheme: dark;
+      --vscode-editor-background: #121314;
+      --vscode-editor-foreground: #BBBEBF;
+      --vscode-textLink-foreground: #48A0C7;
+      --vscode-textLink-activeForeground: #53A5CA;
+      --vscode-textPreformat-foreground: #8C8C8C;
+      --vscode-textPreformat-background: #262626;
+      --vscode-textCodeBlock-background: #242526;
+      --vscode-widget-border: #2A2B2C;
+      --vscode-scrollbarSlider-background: #A8A9AA85;
+    }
+    .vscode-light {
+      color-scheme: light;
+      --vscode-editor-background: #FFFFFF;
+      --vscode-editor-foreground: #202020;
+      --vscode-textLink-foreground: #0069CC;
+      --vscode-textLink-activeForeground: #0069CC;
+      --vscode-textPreformat-foreground: #3B3B3B;
+      --vscode-textPreformat-background: #0000001F;
+      --vscode-textCodeBlock-background: #ECECEC;
+      --vscode-widget-border: #E2E2E5;
+      --vscode-scrollbarSlider-background: #646464C0;
+    }
+    /* The base styles VS Code gives every preview, in its low-priority layer so the stylesheets above win. */
+    @layer vscode-default {
+      html { scrollbar-color: var(--vscode-scrollbarSlider-background) var(--vscode-editor-background); }
+      body { color: var(--vscode-editor-foreground); margin: 0; }
+      a { color: var(--vscode-textLink-foreground); }
+      a:hover { color: var(--vscode-textLink-activeForeground); }
+      code { color: var(--vscode-textPreformat-foreground); background-color: var(--vscode-textPreformat-background); padding: 1px 3px; border-radius: 4px; }
+      pre code { background-color: transparent; padding: 0; }
+    }
+    /* Additions for this page. */
+    html { background: var(--vscode-editor-background); }  /* VS Code paints this behind its preview */
+    body { max-width: 900px; margin: 0 auto; }  /* a browser tab is wider than VS Code's preview pane */
+    nav { position: sticky; top: 0; z-index: 1; line-height: 18px; padding: 2px 0; font-size: 12px;
+          background: var(--vscode-editor-background); border-bottom: 1px solid var(--vscode-widget-border); }
+    nav button { font: inherit; padding: 0 4px; border: 0; background: none; color: var(--vscode-textLink-foreground); cursor: pointer; }
+    h1, h2, h3, h4, h5, h6 { scroll-margin-top: 40px; }  /* anchor jumps land below the sticky bar */
+  </style>
+  <script>
+    // Like VS Code, mark the page vscode-dark or vscode-light; here it follows the system setting.
+    // Runs in <head> so the first paint already has the right colors.
+    const dark = matchMedia('(prefers-color-scheme: dark)');
+    const setTheme = () => { document.documentElement.className = dark.matches ? 'vscode-dark' : 'vscode-light'; };
+    setTheme();
+    dark.addEventListener('change', setTheme);
+  </script>
+</head>
+<body>
+  <nav>
+    <button onclick="setAll(true)">[ expand all ]</button>
+    <button onclick="setAll(false)">[ collapse all ]</button>
+  </nav>
+  <main></main>
+  <script src=".readme-vendor/marked.min.js"></script>
+  <script src=".readme-vendor/highlight.min.js"></script>
+  <script>
+    const main = document.querySelector('main');
+
+    function setAll(open) {
+      for (const d of document.querySelectorAll('details')) d.open = open;
+    }
+
+    // Needs the Run server: browsers block fetch() from a file:// page.
+    // 'no-cache' makes the browser re-check README.md, so a reload shows edits.
+    fetch('README.md', { cache: 'no-cache' })
+      .then(r => r.text())
+      .then(md => {
+        main.innerHTML = marked.parse(md);
+        // marked labels each code block (class="language-js"); highlight.js colors it by that label.
+        for (const code of main.querySelectorAll('pre code')) hljs.highlightElement(code);
+        // marked adds no heading ids; build GitHub's (ASCII headings only) so links like #how-it-works work.
+        for (const h of main.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+          h.id = h.textContent.trim().toLowerCase().replace(/[^\w\- ]/g, '').replace(/ /g, '-');
+        }
+        document.title = main.querySelector('h1').textContent;
+        document.getElementById(location.hash.slice(1))?.scrollIntoView();  // target did not exist at load
+      })
+      .catch(() => {
+        main.textContent = 'Could not load README.md. Start the server (see Run in README.md), then open http://localhost:8000/README.html';
+      });
+  </script>
+</body>
+</html>
