@@ -15,6 +15,13 @@
           { "type": "command", "command": "uv run --no-project python \"$CLAUDE_PROJECT_DIR/.checks/boundaries.py\" >/dev/null || exit 2" }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.checks/stop-hook.sh\"" }
+        ]
+      }
     ]
   },
   "permissions": {

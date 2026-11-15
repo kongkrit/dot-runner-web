@@ -4,7 +4,7 @@ Guidance for Claude Code in this repository.
 
 ## What this is
 
-A small browser app for **learning Preact Signals and lit-html**: a dot moving on a 16×8 grid. Plain ES modules with no npm and no build step; the two libraries are vendored in `vendor/` and loaded through an import map in `index.html`.
+A small browser app for **learning Preact Signals and lit-html**: a dot moving on a 16×8 grid, built twice on one page (singleton and factory) so the two patterns can be compared. Plain ES modules with no npm and no build step; the two libraries are vendored in `vendor/` and loaded through an import map in `index.html`.
 
 ## Code principles
 
@@ -18,14 +18,15 @@ Code is simple, minimal, easy to understand, and DRY. These come before cleverne
 
 ## Architecture rules
 
-The app is split like the bare-metal C original in `C/`: model, view, controller, and a main that wires them. These boundaries are checked by `.checks/boundaries.py`, which a `PostToolUse` hook runs after every edit; run it by hand with `uv run --no-project python .checks/boundaries.py`.
+The app is split like the bare-metal C original in `C/`: model, view, controller, and a main that wires them. It exists in two versions, each in its own folder with the same file names: `singleton/` (each part exists once, its state in file-level variables) and `factory/` (`main.js` creates the parts with `createModel()` and `createController()`). Both share `model-controller-common.js` (`Cmd`, the model–controller message, like the C `command` enum) and `view.js`. The grid size (`WIDTH`, `HEIGHT`) belongs to the model: each `model.js` defines it, repeated on purpose, and hands it to the view as `model.width` and `model.height`. The rules below apply per file name in both folders. They are checked by `.checks/boundaries.py`, which a `PostToolUse` hook runs after every edit and a `Stop` hook runs before a turn may end (shell edits skip the first, not the second); run it by hand with `uv run --no-project python .checks/boundaries.py`.
 
-- **Roles:** `model.js` holds the state and the only rule that changes it, `update(cmd)`. `view.js` draws the state once per call (`viewUpdate`). `controller.js` turns key presses into commands. `main.js` creates the parts, connects them to the browser, and decides when things run: the key listener, the tick, and the redraw `effect`.
-- **Imports go one way:** model → `@preact/signals-core`; view → `lit-html`, `./model.js`; controller → `./model.js`; main → `@preact/signals-core`, `./model.js`, `./view.js`, `./controller.js`. Nothing imports `main.js`.
-- **Browser globals** (`window`, `document`, `navigator`, `localStorage`, `fetch`, `setTimeout`, `setInterval`) appear only in `main.js`. Other parts get what they need passed in: the key event, the container element.
-- **State changes only through `m.update(cmd)`:** only `model.js` writes `.value`; only `main.js` calls `.update(` and creates `effect`s; `viewUpdate` is called only inside an `effect(...)` in `main.js`, on one line, so the screen never goes stale.
-- **Parts are factories:** model, view, and controller keep no changing state at file level (no top-level `let` or `var`; constant tables are frozen). `main.js` creates the instances with `createModel()` and `createController()`.
-- **New root-level `.js` file:** add it to `ALLOWED_IMPORTS` in `.checks/boundaries.py` (and to these rules) before using it; the check rejects files it doesn't know.
+- **Roles:** `model.js` holds the state and the only rule that changes it, `update(cmd)`. `view.js` draws the state once per call (`viewUpdate`). `controller.js` turns key presses into commands. `main.js` connects the parts to the browser and decides when things run: the key listener, the tick, and the redraw `effect`.
+- **Imports go one way:** `model-controller-common.js` imports nothing and holds only `Cmd`; `view.js` → `lit-html` only; `model.js` → `@preact/signals-core`, `model-controller-common.js`; `controller.js` → `model-controller-common.js`; `main.js` → `@preact/signals-core`, `view.js`, and the `model.js` and `controller.js` of its own folder. Nothing imports a `main.js`, and the two versions never import each other.
+- **Browser globals** (`window`, `document`, `navigator`, `location`, `history`, `localStorage`, `sessionStorage`, `fetch`, `alert`, `setTimeout`, `setInterval`, `requestAnimationFrame`, `queueMicrotask`, `addEventListener`, `globalThis`, `self`) appear only in `main.js`. Other parts get what they need passed in: the key event, the container element.
+- **State changes only through `model.update(cmd)`:** only `model.js` writes `.value` (with `=`, `+=` and the like, or `++`/`--`); only `main.js` uses `.update` and creates `effect`s; `viewUpdate` is called only inside an `effect(...)` in `main.js`, on one line, so the screen never goes stale.
+- **File-level state:** allowed only in `singleton/` (that is the pattern). `factory/` parts keep no changing state at file level (no top-level `let` or `var`, and no top-level `const` holding an array, object or `new` instance; constant tables are wrapped in `Object.freeze`) and `main.js` creates the instances.
+- **Deliberate duplication:** the update rule and the key table appear once per version on purpose, so the two patterns can be read side by side. This is a stated exception to DRY; keep the two copies in step.
+- **New `.js` file:** add it to `ALLOWED_IMPORTS` in `.checks/boundaries.py` (and to these rules) before using it; the check rejects files it doesn't know.
 
 ## How to explain things
 
@@ -53,11 +54,13 @@ Goal: as simple as possible, without saying anything false.
 
 ## Layout
 
-- `index.html` — page shell: import map, grid CSS, `#app` container.
-- `model.js` — state as signals and `update(cmd)`; `view.js` — lit-html template, `viewUpdate(m, container)`; `controller.js` — key table, `createController()` with `keydown` and `read`; `main.js` — wiring: creates model and controller, `keydown` listener, 150 ms tick, `effect` → `viewUpdate`.
-- `.checks/boundaries.py` — checks the Architecture rules above (stdlib Python); run by the `PostToolUse` hook.
+- `index.html` — page shell: import map, grid CSS, the `#app-singleton` and `#app-factory` containers, one module script per version.
+- `model-controller-common.js` — `Cmd`, shared by model and controller; `view.js` — lit-html template and `viewUpdate(m, container)`, shared by both versions, grid size read from the model.
+- `singleton/` — `model.js` (state as file-level signals, exports `model`), `controller.js` (key table and file-level latch, exports `controller`), `main.js` (wiring into `#app-singleton`).
+- `factory/` — `model.js` (`createModel()`), `controller.js` (`createController()`), `main.js` (creates one of each, wiring into `#app-factory`).
+- `.checks/boundaries.py` — checks the Architecture rules above (stdlib Python); run by the `PostToolUse` hook. `.checks/stop-hook.sh` — the `Stop` hook: runs the same check and refuses to let a turn end while it fails.
 - `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is. `.readme-vendor/` — for `README.html`, used as-is: minified marked 18.1.3 and highlight.js 11.11.1, plus VS Code 1.146.0's Markdown preview stylesheets (`vscode-markdown.css`, `vscode-highlight.css` from `extensions/markdown-language-features/media/`).
-- `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, a `SessionStart` hook that prints `.claude/PROGRESS.md` into context, and a `PostToolUse` hook that runs `.checks/boundaries.py` after every edit. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
+- `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, a `SessionStart` hook that prints `.claude/PROGRESS.md` into context, a `PostToolUse` hook that runs `.checks/boundaries.py` after every edit (feedback; it cannot undo the edit), and a `Stop` hook (`.checks/stop-hook.sh`) that keeps Claude working until that check passes. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
 - `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one (base: the last commit that touched it), then commits.
 - `.claude/rules/markdown.md` — how to write README.md and docs/: which `##` sections fold, and how. Claude Code loads it by itself when working on those files.
 - `.claude/PROGRESS.md` — latest session handoff only, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`.
@@ -76,7 +79,7 @@ Goal: as simple as possible, without saying anything false.
 
 ## Development environment
 
-- **Debian 13 (trixie)** with `docker` installed. Base tooling via `apt`: `git`, `gh`, `python3`, `python3-dev`, `build-essential`, `curl`, `jq`, `wget`; plus `uv` from its standalone installer into `~/.local/bin` (commands in the [README](../README.md#development-setup-debian-13)).
+- **Debian 13 (trixie)** with `docker` installed. Base tooling via `apt`: `git`, `gh`, `python3`, `python3-dev`, `build-essential`, `curl`, `jq`, `wget`, `time`; plus `uv` from its standalone installer into `~/.local/bin` (commands in the [README](../README.md#development-setup-debian-13)).
 - **Install missing tools yourself:** `sudo apt install -y <package>` (`sudo apt update` first if not found). Use `apt` for system tools only. If the project will keep relying on a new tool, add it to the README's install command.
 - **Python: use `uv` only.** Never run `pip`, `pip3`, `python3 -m pip`, `python3 -m venv`, or `pipx`; `uv pip …` is uv's own subcommand and is fine. uv handles both venvs and installs, and Debian 13 blocks system-wide `pip install` anyway (PEP 668). One venv per project:
 

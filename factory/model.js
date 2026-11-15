@@ -1,12 +1,13 @@
 import { signal, computed } from '@preact/signals-core';
+import { Cmd } from '../model-controller-common.js';
 
-export const WIDTH = 16, HEIGHT = 8;
-export const Cmd = Object.freeze({ NONE: 0, STOP: 1, LEFT: 2, RIGHT: 3, UP: 4, DOWN: 5 });
+const WIDTH = 16, HEIGHT = 8;               // grid size, owned by the model
 
 export function createModel() {
   const row = signal(4), col = signal(7);   // private, like fields of model_t
   let cmd = Cmd.STOP;                       // not shown on screen, so plain variable
   return {
+    width: WIDTH, height: HEIGHT,           // the view draws whatever size the model says
     row: computed(() => row.value),         // read-only to outsiders: const model_t *
     col: computed(() => col.value),
     hex: computed(() => (row.value << 4) | col.value),
