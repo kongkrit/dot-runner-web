@@ -1,6 +1,6 @@
 # Proposal: extract a reusable MVC template (Preact Signals + lit-html)
 
-**Status:** proposal, nothing built yet. Written 2026-11-16, at commit `3e3c56e` of this repo (`dot-runner-web`).
+**Status:** proposal, nothing built yet. Written 2026-11-16 and last updated at commit `d3af8f6` of this repo (`dot-runner-web`).
 **Audience:** a fresh Claude Code session with no memory of the conversation that produced this repo. Everything you need is here or in the files it names. Where this document and `.claude/CLAUDE.md` ever disagree, `CLAUDE.md` is the source of truth for the current code.
 **Before doing anything:** read `.claude/CLAUDE.md`, `.claude/rules/markdown.md`, `.checks/boundaries.py`, `.checks/stop-hook.sh` and `.claude/settings.json`. Then settle the [open decisions](#4-open-decisions-ask-the-user-first) with the user.
 
@@ -24,22 +24,28 @@ This repo's `.claude/CLAUDE.md`, together with `.checks/boundaries.py` and two h
 
 ### 1.2 What this repo is
 
-A red dot moves on a 16×8 grid in the last arrow-key direction pressed (Space stops it), and a readout shows its position as one hex byte: `(row << 4) | col`, starting at `47`. It ports a bare-metal C program, `C/dot_runner.c`, whose pieces are `model_update()`, `view_update()`, `controller_read()` and an NMI (non-maskable interrupt) tick. The page runs the same app **twice**, built two ways, in two self-contained folders that share nothing but `vendor/`:
+A red dot moves on a 16×8 grid in the last arrow-key direction pressed (Space stops it), and a readout shows its position as one hex byte: `(row << 4) | col`, starting at `47`. It ports a bare-metal C program, `C/dot_runner.c`, whose pieces are `model_update()`, `view_update()`, `controller_read()` and an NMI (non-maskable interrupt) tick. The page runs the same app **three times**, built three ways, in three self-contained folders that share nothing but `vendor/`:
 
 ```
-index.html     import map, CSS, #app-singleton and #app-factory containers, one module script each
+index.html     import map, CSS, #app-singleton / #app-factory / #app-class containers, one module script each
 singleton/     each part exists once; state in file-level variables; parts are ready-made objects
   model-controller-common.js   Cmd only: the controller→model message (like the C `command` enum)
   model.js        exports `model` (signals at file level, read-only computeds, update(cmd))
   view.js         exports viewUpdate(m, container); the only file in the folder importing lit-html
   controller.js   exports `controller` (key table, file-level `pending` latch, keydown/read)
   main.js         wires them; effect(() => viewUpdate(model, document.querySelector('#app-singleton')))
-factory/       main.js creates every part
+factory/       main.js creates every part with closure factories
   model-controller-common.js   byte-identical copy of the singleton one (enforced by the check)
   model.js        createModel()
   view.js         createView(container) → { update(m) }  (same template as singleton/view.js)
   controller.js   createController()
   main.js         creates model, view, controller; effect(() => view.update(model))
+class/         main.js creates every part with `new`; state in `#` private fields
+  model-controller-common.js   byte-identical copy of the singleton one (enforced by the check)
+  model.js        class Model (update() is a prototype method, shared by all instances)
+  view.js         class View: new View(container), view.update(m)
+  controller.js   class Controller (#pending latch)
+  main.js         new Model() / View / Controller; listener wrapped as e => controller.keydown(e)
 vendor/        lit-html 3.3.3 (lit-html.js), @preact/signals-core 1.14.5 (signals-core.mjs)
 .checks/       boundaries.py (the checker), stop-hook.sh (Stop hook wrapper)
 C/             the original C program
@@ -47,10 +53,11 @@ C/             the original C program
 
 - **Run it:** `uv run --no-project python -m http.server 8000`, then open <http://localhost:8000>.
 - **Build:** there is no npm and no build step. The browser loads the vendored libraries as ES modules, through the import map in `index.html`.
-- **README.md** explains everything for the learner, including a "Code walkthrough" that copies each file in full and a "Singleton vs factory" comparison. Read it to see how explanations are pitched.
+- **README.md** explains everything for the learner. It has a "Code walkthrough" that copies each file in full, folded per folder, and a "Singleton vs factory" section that ends with a "Factory vs class" comparison table. Read it to see how explanations are pitched.
 - **History worth knowing:**
-  - A third version, `mixed/` (a singleton controller plus a factory model), existed from commit `236ef82` and was removed in `3e3c56e`, when the user chose two fully self-contained versions.
+  - A version called `mixed/` (a singleton controller plus a factory model) existed from commit `236ef82` and was removed in `3e3c56e`, when the user chose fully self-contained versions.
   - Before `3e3c56e`, `view.js` and `model-controller-common.js` were shared at the root.
+  - `class/` was added in `d3af8f6`, after a discussion of closures versus classes, so the trade-off can be compared on real code.
 
 ### 1.3 Decisions already made (keep them unless the user reopens them)
 
@@ -59,31 +66,36 @@ C/             the original C program
 | Model / view / controller / `main.js`, as in the C program | The user thinks in that structure; each file maps to a C function. |
 | State lives in `signal`s; the outside gets read-only `computed` views | A write from outside throws at run time, like a `const model_t *` that is actually enforced. |
 | Only `model.update(cmd)` changes state | One write path, like `model_update()`. |
-| Each view draws once per call: `viewUpdate(m, container)` in singleton, `view.update(m)` on a view made by `createView(container)` in factory; lit-html is imported only by `view.js` | Swapping the view library would touch one file per version. |
+| Each view draws once per call: `viewUpdate(m, container)` in singleton; `view.update(m)` on a view made by `createView(container)` in factory or `new View(container)` in class. lit-html is imported only by `view.js` | Swapping the view library would touch one file per version. |
 | The redraw `effect` lives in `main.js` (the user chose "option A", after comparing it with putting it in the view) | This matches the Elm architecture, where the runtime owns the update→view loop, and keeps the view a plain drawing function. The check enforces that the redraw call is made only inside an `effect` in `main.js`, so the screen cannot go stale. |
 | Browser globals (`window`, `document`, timers, `fetch`, `localStorage`, `addEventListener`, ...) only in `main.js` | Parts get what they need passed in (the key event, the container); the model stays pure and testable. |
 | The grid size (`WIDTH`, `HEIGHT`) is defined in the model and given to the view as `model.width` and `model.height` | The view imports nothing from the model; it draws whatever it is given. |
-| Each folder is self-contained (every relative import stays in its own folder), and `model-controller-common.js` holds only `Cmd` | The two versions can be read, diffed and copied independently. The `Cmd` file mirrors the C split, where the `command` enum is the MODEL-CONTROLLER message. The user picked the file name. |
-| Two versions, singleton and factory | The comparison is the point of this repo. The README's advice: a singleton for things the world limits to one (the keyboard), a factory for things you may want two of (models). |
-| Closures, not `class` | No `this` traps: `addEventListener('keydown', controller.keydown)` just works without `.bind`. Real privacy, and fewer concepts. Classes only pay off at roughly 10⁵ instances that each carry methods. |
+| Each folder is self-contained (every relative import stays in its own folder), and `model-controller-common.js` holds only `Cmd` | The versions can be read, diffed and copied independently. The `Cmd` file mirrors the C split, where the `command` enum is the MODEL-CONTROLLER message. The user picked the file name. |
+| Three versions: singleton, factory, class | The comparison is the point of this repo. The README's advice: a singleton for things the world limits to one (the keyboard), and a factory or class for things you may want two of (models). |
+| Closures and classes both exist side by side; the template's choice is still open (decision 2 in §4) | Closures (`factory/`) have no `this` traps and need no special privacy syntax. Classes (`class/`) share methods on the prototype and match C++ `new`. They cost three things: the `this` trap (a method handed over alone loses its object, so `class/main.js` wraps the listener); `#` fields with their *brand check* (before touching `#pending`, the browser verifies that `this` really is a `Controller`, and throws if not); and `handleEvent` as an alternative to wrapping. The README covers all three. |
+| Key lookup uses `Object.hasOwn(KEYMAP, e.key)`, not `e.key in KEYMAP` | `in` also finds names every object inherits: `'toString' in KEYMAP` is `true`. `Object.hasOwn` checks only the table's own keys. All three controllers use it. |
 | Vendored libraries, an import map, no npm | No toolchain to learn. `node`/`npm` are not project dependencies (`CLAUDE.md`). |
 
 ### 1.4 Enforcement machinery
 
 - **`.checks/boundaries.py`** (stdlib Python, about 100 lines; run with `uv run --no-project python .checks/boundaries.py [root]`):
   - `ALLOWED_IMPORTS` maps path globs (`*/model.js`, ...) to the imports each file may have. Relative imports are resolved, and `{dir}` means "the importing file's own folder", so a file can only import from its own folder.
-  - `RULES` is a list of `(regex, globs where allowed, message)` entries: browser globals, `effect`, `.value` writes (including `+=` and `++`), `.update`, `viewUpdate`/`createView` outside `view.js` and `main.js`, and file-level changing state (`let`/`var`, or a top-level `const` holding `[`, `{` or `new`). That last one is allowed only in `singleton/*` and `*/main.js`.
-  - `REDRAW` plus a one-line check require `viewUpdate(...)` or `view.update(...)` in a `main.js` to sit inside `effect(...)`.
-  - `COPIES` requires `factory/model-controller-common.js` to stay byte-identical to the singleton one.
+  - `RULES` is a list of `(regex, globs where allowed, message)` entries:
+    - browser globals, `effect`, `.value` writes (including `+=` and `++`) and `.update`;
+    - `viewUpdate`/`createView`/`View` used outside `view.js` and `main.js`;
+    - file-level changing state (`let`/`var`, or a top-level `const` holding `[`, `{` or `new`), allowed only in `singleton/*` and `*/main.js`. `factory/` and `class/` keep their state per instance.
+  - `REDRAW` plus a one-line check require `viewUpdate(...)` or `view.update(...)` in a `main.js` to sit inside `effect(...)`. This covers `class/` too.
+  - `COPIES` requires `factory/model-controller-common.js` and `class/model-controller-common.js` to stay byte-identical to the singleton one.
   - `//` comments are stripped first, and an unknown `.js` file is itself a violation.
   - It is **a tripwire for honest mistakes, not a sandbox**: deliberately obfuscated code can get past it.
+  - **Known gap:** the file-level-state rule only matches top-level `let`/`var`/`const`. A `static` class field (for example `static count = 0;` inside a class body) belongs to the class itself, so every instance shares it. That makes it a singleton hidden inside the class, and the check does not flag it. This was confirmed by reading the rule's regex, `.checks/boundaries.py` line 39.
 - **Hooks in `.claude/settings.json`:**
   - `PostToolUse` (`Edit|Write|MultiEdit`) runs the check after every edit and gives the agent `file:line` feedback. It **cannot undo** the edit, and edits made with shell commands skip it.
   - `Stop` (`.checks/stop-hook.sh`) runs the check when the agent tries to end its turn, and on a violation sends it back to fix the code. After one failed round it lets the turn end but shows the user a warning, so a violation the agent cannot fix does not loop forever.
 - **How it was verified:**
-  - A 76-case test matrix ran against the **previous** rule table (commit `5de3e33`, three versions). It planted every rule in every folder and checked for the exact message, plus allowed cases and legitimate code. All 76 passed.
+  - A 76-case test matrix ran against an **earlier** rule table (commit `5de3e33`, three versions including `mixed/`). It planted every rule in every folder and checked for the exact message, plus allowed cases and legitimate code. All 76 passed.
   - The matrix lived in a session scratch file and was **not committed**.
-  - The rule table was then changed for the two self-contained folders (`3e3c56e`), and no equivalent matrix has been run on it yet. The template should commit a checker test (see §2.4).
+  - The rule table has changed twice since (`3e3c56e`, `d3af8f6`), and this session has no record of an equivalent matrix run on the current rules. The template should commit a checker test (see §2.4).
 
 ### 1.5 Gotchas already hit (save yourself the time)
 
@@ -93,6 +105,8 @@ C/             the original C program
 - **Monospace sizing:** CSS `font: 1.5em monospace` with a bare `monospace` family scales from the browser's 13 px monospace default, giving 19.5 px rather than 24 px.
 - **Signals ignore same-value writes:** writing the same value to a signal notifies nobody. Arrays and objects must be **replaced, not mutated** (`list.value = [...list.value, x]`, not `push`). Otherwise nothing redraws.
 - **Several writes in one `update`:** wrap them in `batch(() => { … })`, or each write triggers its own redraw.
+- **Class methods lose `this` when handed over alone.** `addEventListener('keydown', controller.keydown)` breaks with a class, because the browser calls the method without its object. Wrap it (`e => controller.keydown(e)`), as `class/main.js` does. Closure methods have no `this`, so they don't have this problem.
+- **`in` finds inherited names.** Use `Object.hasOwn(table, key)` for lookups in plain tables.
 - **Markdown lists:** a blank line between bullets makes the whole list "loose" (evenly spaced). To separate groups visibly, an indented `***` inside the last bullet of each group works on GitHub and in VS Code.
 - **Indenting nested folds:** neither renderer indents nested `<details>`, and GitHub strips `style`. Wrap the nested folds in `<dl><dd>` (see `.claude/rules/markdown.md`).
 
@@ -110,21 +124,28 @@ C/             the original C program
 
 ### 2.2 What stays in dot-runner (not in the template)
 
-- The two versions, their deliberate duplication and the `COPIES` rule. The template has one version.
+- The three versions, their deliberate duplication and the `COPIES` rule. The template has one version.
 - The README walkthrough rule ("copies each source file in full"). It is great for learning but too much upkeep for a real app.
 - Dot-app and C details: `KEYPAD`, the NMI tick, 16×8, `Cmd` as a bare enum.
 
-### 2.3 Recommended skeleton style: factory (decision 2 in §4)
+### 2.3 Skeleton style (decision 2 in §4): factory recommended, class a close second
 
-Follow `factory/` as committed in `3e3c56e`. That is the user's latest direction: even the view is made by a factory. Every part is created in `main.js` (`createModel()`, `createView(container)`, `createController()`), so a second model or view costs one line, and no file keeps state at file level. The skeleton lives at the root, with no version folders:
+All three styles exist in this repo as working references. Summary:
+
+- **Factory (recommended), like `factory/`.** Every part is created in `main.js` (`createModel()`, `createView(container)`, `createController()`), so a second model or view costs one line. No `this`, no special privacy syntax, and no file keeps state at file level.
+- **Class, like `class/`.** It's closest to C++ `new`, methods are shared on the prototype, and the syntax is familiar from libraries. The costs: the `this` wrapping in `main.js`, the `#` syntax, and one more rule the check doesn't have yet (no `static` mutable fields, §2.4 item 7). For the portfolio app (a few model instances, data held as plain records), the practical difference from a factory is small.
+- **Singleton, like `singleton/`.** One instance only. That's fine for a single-screen app, but it's the wrong default for a template.
+
+The skeleton lives at the root, with no version folders. Shown in the factory style; the class variant of each file is in brackets:
 
 ```
 index.html             import map, CSS, #app container, one module script
 model-controller-common.js   message types shared by model and controller (name kept from dot-runner)
-model.js               export function createModel()  — signals inside, read-only computeds out, update(msg)
-view.js                export function createView(container) → { update(m) } — lit-html only here
-controller.js          export function createController() — input → messages
+model.js               export function createModel()   [class Model]  — signals inside, read-only computeds out, update(msg)
+view.js                export function createView(container) → { update(m) }   [class View]  — lit-html only here
+controller.js          export function createController()   [class Controller]  — input → messages
 main.js                creates the parts, wires inputs, timers, effect(() => view.update(model))
+                       [class: new …(); wrap methods handed to the browser, e.g. e => controller.keydown(e)]
 vendor/                lit-html 3.3.3, @preact/signals-core 1.14.5 (copy from this repo)
 .checks/boundaries.py  rule table rewritten for root-level files; no COPIES, no {dir} needed
 .checks/stop-hook.sh   unchanged
@@ -144,21 +165,22 @@ Claude Code loads `.claude/rules/*.md` files automatically when working on paths
 3. **An input/output rule:** `fetch`, `localStorage`, timers and the URL live in `main.js` or in small adapter files that `main.js` owns, never in the model. This is half-enforced already, since those globals are allowed only in `main.js`. Decide whether adapter files get their own entry in the rule table.
 4. **Tests for the pure parts:** model updates and derived calculations. `CLAUDE.md` currently says `node`/`npm` are not used, so either a browser test page (`test.html` plus `*.test.js`, run in headless Chromium) or an explicit exception for Node in tests only. Ask the user (§4).
 5. **A committed test for the checker itself** (a replacement for the scratch matrix in §1.4), so changes to `boundaries.py` can't silently weaken it.
-6. **The pitfalls from §1.5** written into `rules/mvc.md`: replace arrays rather than mutating them, `batch`, and money stored as integer cents.
+6. **The pitfalls from §1.5** written into `rules/mvc.md`: replace arrays rather than mutating them, `batch`, money stored as integer cents, `Object.hasOwn` for table lookups, and, for classes, wrapping methods handed to the browser.
+7. **Only if the template uses classes:** a check rule against mutable `static` class fields (the gap in §1.4). A `static` field is class-level shared state, so it belongs to the same "no file-level state" rule.
 
 ### 2.5 Packaging
 
 1. Create a new repository (name to be agreed, for example `signals-lit-mvc-template`) holding the skeleton above. Mark it as a template on GitHub (`gh repo edit --template`, or the repository's Settings), so new projects start with "Use this template".
-2. Optionally, have this repo also take `rules/mvc.md` and slim its `CLAUDE.md`, so both repos share one rule text. dot-runner's rules have the two-version specifics on top, so check with the user before changing this repo.
+2. Optionally, have this repo also take `rules/mvc.md` and slim its `CLAUDE.md`, so both repos share one rule text. dot-runner's rules have the three-version specifics on top, so check with the user before changing this repo.
 
 ## 3. First user of the template: the portfolio app
 
 The user plans a portfolio object: each portfolio has many holdings, and each holding has many buy and sell transactions at different prices. They asked whether to use a JavaScript `class`. The guidance they already have:
 
-- **No class.** Transactions are **plain data records**, not objects with behavior:
+- **Records, not objects, for the data.** Transactions are **plain data records**, not objects with behavior:
   `{ symbol: 'AAPL', date: '2026-03-02', side: 'buy', qty: 10, priceCents: 18932 }`.
-  Holdings, average cost and profit or loss are **computed from** the records by *pure functions* (functions whose result depends only on their inputs and which change nothing), for example `holdingsFrom(transactions)`. This is arrays of structs plus functions in C terms. Plain records also round-trip through `JSON.stringify`/`JSON.parse` for saving, which class instances don't (they lose their methods).
-- **Model sketch** (factory; one per portfolio):
+  Holdings, average cost and profit or loss are **computed from** the records by *pure functions* (functions whose result depends only on their inputs and which change nothing), for example `holdingsFrom(transactions)`. This is arrays of structs plus functions in C terms. Plain records also round-trip through `JSON.stringify`/`JSON.parse` for saving, which class instances don't (they lose their methods). This holds whichever style the *model* uses (decision 2).
+- **Model sketch** (factory style; one per portfolio. A class version would hold the same signals in `#` fields, with `update` as a method):
   ```js
   export function createPortfolio() {
     const transactions = signal([]);   // records like the one above
@@ -179,12 +201,17 @@ The user plans a portfolio object: each portfolio has many holdings, and each ho
   ```
 - **Money as integers:** in JavaScript, `0.10 + 0.20` is `0.30000000000000004`, but `10 + 20` cents is exactly `30`. Integers are exact up to 2⁵³ (about 9 × 10¹⁵ cents). This is fixed-point arithmetic, like Q-format in DSP: pick a scale per field (cents, or 1/10,000 of a dollar for finer prices). Division and averages need explicit rounding.
 - **The cost-basis rule must be decided early:** FIFO (sell the oldest shares first) or average cost. It changes realized gains and depends on the user's tax rules, so it is a requirement to ask about, not a coding detail.
-- **When a class would pay off:** about 10⁵ or more instances that each carry methods (a simulation, a game with many entities), or when extending a library built on classes. The trade-offs (prototype-shared methods vs per-instance closures, `this` and `.bind`, `#private` fields) are summarized in this repo's README → "Singleton vs factory" → "Subtle differences", item 7.
+- **Where the class trade-offs are written up:**
+  - README → "Singleton vs factory" → "Factory vs class" (the comparison table);
+  - the `class/` walkthrough (the `this` trap, the brand check, and the `handleEvent` footnote);
+  - the Terms entries for `class` and `#`.
+
+  Classes pay off most at about 10⁵ or more instances that each carry methods (a simulation, a game with many entities), or when extending a library built on classes.
 
 ## 4. Open decisions (ask the user first)
 
 1. **Where the template lives:** a new GitHub repository, and what name? Creating and pushing a repository is outward-facing, so get explicit approval.
-2. **Skeleton style:** factory throughout, like `factory/` (recommended, §2.3); singleton; or mixed (a singleton controller plus a factory model; tried in this repo and removed in `3e3c56e`)?
+2. **Skeleton style:** factory, like `factory/` (recommended, §2.3); class, like `class/`; or singleton, like `singleton/`? (Mixed, a singleton controller plus a factory model, was tried in this repo and removed in `3e3c56e`.)
 3. **Tests:** a browser test page run in headless Chromium (keeps the "no Node" rule), or allow Node for tests only?
 4. **README walkthrough** in the template: none (recommended), or a short one?
 5. **Should dot-runner adopt `.claude/rules/mvc.md` too**, or keep its own full `CLAUDE.md`?
@@ -193,11 +220,12 @@ The user plans a portfolio object: each portfolio has many holdings, and each ho
 ## 5. Execution plan for a fresh session
 
 1. Read the files listed at the top, run `git status` (other sessions may be active), then ask the open decisions (§4) in one round.
-2. Create the template directory (outside this repo, for example `~/signals-lit-mvc-template`) with the §2.3 layout. Copy `vendor/` and `.claude/rules/markdown.md` unchanged, and write the skeleton files in the chosen style, using this repo's matching folder (`factory/` or `singleton/`) as the reference.
+2. Create the template directory (outside this repo, for example `~/signals-lit-mvc-template`) with the §2.3 layout. Copy `vendor/` and `.claude/rules/markdown.md` unchanged, and write the skeleton files in the chosen style, using this repo's matching folder (`factory/`, `class/` or `singleton/`) as the reference.
 3. Rewrite `.checks/boundaries.py` for root-level files:
    - `ALLOWED_IMPORTS` keyed by plain file names (`model.js`, `view.js`, ...);
    - remove `COPIES` and the `{dir}` folder rules;
-   - keep `RULES` and `REDRAW` as they are, adjusting the allowed globs to root-level names (for example `main.js` instead of `*/main.js`).
+   - keep `RULES` and `REDRAW` as they are, adjusting the allowed globs to root-level names (for example `main.js` instead of `*/main.js`);
+   - if the style is class, add the `static`-field rule (§2.4 item 7).
 
    Then add the committed checker test (§2.4 item 5).
 4. Copy `.claude/settings.json` (hooks and allowlist) and `.checks/stop-hook.sh`. Write `.claude/rules/mvc.md` (§2.1 rules plus the §2.4 additions) and a short `CLAUDE.md`.
@@ -206,7 +234,7 @@ The user plans a portfolio object: each portfolio has many holdings, and each ho
 
 ## 6. Acceptance checks
 
-- `uv run --no-project python .checks/boundaries.py` prints `boundaries ok (N files)`, and the committed checker test passes, covering at least: each rule flagged in each file role, allowed cases, and legitimate code such as `===` comparisons and frozen tables.
+- `uv run --no-project python .checks/boundaries.py` prints `boundaries ok (N files)`, and the committed checker test passes, covering at least: each rule flagged in each file role, allowed cases, and legitimate code such as `===` comparisons and frozen tables (plus a `static` field being flagged, if the style is class).
 - **The hooks are proven live:**
   - a deliberately violating edit comes back with the check's message from the `PostToolUse` hook;
   - a violation left in place makes the `Stop` hook refuse to end the turn;
