@@ -1,6 +1,6 @@
 # Study plan
 
-The goal: by the end you can build a small Preact Signals + lit-html app on your own. Each step has two parts: **read** the listed sections, in order (most are in [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md)), then **build** something small and see it run. The steps go: a hello world from a blank folder, then one small feature added to the singleton, factory and class versions in turn, then an app of your own. The code comments name the C counterpart of each piece, if that helps.
+The goal: by the end you can build a small Preact Signals + lit-html app on your own. Each step has two parts: **read** the listed sections, in order (most are in [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md)), then **build** something small and see it run. The steps go: a hello world from a blank folder, built twice (lit-html alone, then with Preact Signals added), then one small feature added to the singleton, factory and class versions in turn, then an app of your own. The code comments name the C counterpart of each piece, if that helps.
 
 ## Can I skip the factory?
 
@@ -12,19 +12,15 @@ You can, but it costs more than it saves:
 
 ## Step 0: hello world from a blank folder
 
-**Read:**
+The same click counter, built twice: first with lit-html alone, to learn how a page is drawn, then with Preact Signals added, so that it redraws by itself. Both builds live outside the repo, so nothing here is checked against the repo's rules.
 
-1. The README introduction and [Run](README.md#run): how the page is served, and why it needs a server.
-2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *import map*, *=> (arrow function)*, *signal*, *effect*, *html*, *container*, *render*. Skip the rest for now.
-3. [Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml): the import map and module scripts. The hello world's `index.html` below is a trimmed copy.
-
-**Build:** outside the repo, so nothing here is checked against the repo's rules. From the repo root:
+**Setup.** From the repo root:
 
 ```bash
 mkdir ~/hello-signals && cp -r vendor ~/hello-signals/
 ```
 
-`~/hello-signals/index.html`:
+`~/hello-signals/index.html`, used by both builds:
 
 ```html
 <!doctype html>
@@ -46,7 +42,67 @@ mkdir ~/hello-signals && cp -r vendor ~/hello-signals/
 </html>
 ```
 
-`~/hello-signals/main.js`:
+The import map names both libraries from the start, so this file never changes. The browser fetches a module only when some code imports it, so Build 1 never loads Preact.
+
+### Build 1: lit-html alone
+
+**Read:**
+
+1. The README introduction and [Run](README.md#run): how the page is served, and why it needs a server.
+2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *import map*, *=> (arrow function)*, *html*, *container*, *render*. Skip the rest for now.
+3. [Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml): the import map and module scripts. The `index.html` above is a trimmed copy.
+
+**Build:** `~/hello-signals/main.js`:
+
+```js
+import { html, render } from 'lit-html';
+
+let count = 0;
+
+const template = () => html`
+  <button @click=${() => count++}>clicked ${count} times</button>`;
+
+render(template(), document.querySelector('#app'));
+```
+
+Run `cd ~/hello-signals && uv run --no-project python -m http.server 8001` and open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo.
+
+- `` html`…` `` is a template: HTML in backticks, with `${…}` slots that lit-html fills. It only describes the page; it changes nothing.
+- `template` is a function, so each call reads the current `count`. Written as `` const template = html`…` `` it would read `count` once, at 0, and keep that.
+- `render(template(), container)` writes that description into the element. On later calls it changes only the slots whose value changed, here the number.
+- `@click=${fn}` is lit-html's way to attach `fn` as the button's click listener. The repo doesn't use it: it listens for keys on the whole window, which no template draws, so its `main.js` attaches the listener with `addEventListener`.
+
+**Now click the button.** The label stays at "clicked 0 times". Make it count. Hint: `count++` changes only the variable; `render` is what changes the page, and it ran once, when the file loaded.
+
+<details>
+<summary>Solution</summary>
+
+Call `render` again after every change. A `draw` function keeps that call in one place:
+
+```js
+import { html, render } from 'lit-html';
+
+let count = 0;
+
+const template = () => html`
+  <button @click=${() => { count++; draw(); }}>clicked ${count} times</button>`;
+
+const draw = () => render(template(), document.querySelector('#app'));
+
+draw();
+```
+
+The click handler now runs two statements, so its body goes in braces (see *=> (arrow function)* in Terms). Each click runs `count++`, then `draw()`, which builds a fresh description with the new number; `render` compares it with the last one and changes only the text.
+
+</details>
+
+### Build 2: add Preact Signals
+
+Build 1 works only because every change remembers to call `draw()`. Preact Signals makes the redraw automatic.
+
+**Read:** [Terms](HOW_AND_WALKTHROUGH.md#terms): *signal*, *effect*.
+
+**Build:** replace `~/hello-signals/main.js` with:
 
 ```js
 import { signal, effect } from '@preact/signals-core';
@@ -60,15 +116,18 @@ const template = () => html`
 effect(() => render(template(), document.querySelector('#app')));  // re-runs when count changes
 ```
 
-Run `cd ~/hello-signals && uv run --no-project python -m http.server 8001`, open <http://localhost:8001>, and click the button. Port 8001 leaves 8000 free for the repo.
+Reload the page and click the button.
 
 - `signal(0)` makes a box holding one value. You read and write it through `.value`.
-- `` html`…` `` is a template: HTML in backticks, with `${…}` slots that lit-html fills. It only describes the page; it changes nothing.
-- `render(template(), container)` writes that description into the element. On later calls it changes only the slots whose value changed, here the number.
 - `effect(fn)` runs `fn` now, and again whenever a signal that `fn` read last time changes. `template()` reads `count.value`, so every click redraws.
-- `@click=${fn}` is lit-html's way to attach `fn` as the button's click listener. The repo doesn't use it: it listens for keys on the whole window, which no template draws, so its `main.js` attaches the listener with `addEventListener`.
 
-The loop from here on is: edit, save, reload. There is no build step. If a change doesn't show, hard-reload with Ctrl+Shift+R.
+Three changes from Build 1's solution:
+
+1. `let count = 0` became `const count = signal(0)`.
+2. `count` became `count.value`, in the template and in the click handler.
+3. `draw` and its two calls became one `effect`. The click handler only changes `count`; the effect sees the change and redraws. Code added later that changes `count`, such as a timer, needs no `draw()` call either.
+
+The loop from here on is: edit, save, reload. There is no build step. If a change doesn't show, hard-reload with Ctrl+Shift+R (Mac: Cmd+Shift+R).
 
 ## Step 1: singleton
 

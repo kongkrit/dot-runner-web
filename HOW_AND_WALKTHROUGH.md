@@ -31,6 +31,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 | `class/controller.js` | The same controller as `class Controller`, each with its own private `#pending` latch. |
 | `class/main.js` | The same wiring, after creating one model, one view and one controller with `new`; wraps the key listener so that `keydown` keeps `this`; draws into `#app-class`. |
 | `vendor/` | lit-html 3.3.3 (`lit-html.js`) and @preact/signals-core 1.14.5 (`signals-core.mjs`, the package's `dist/signals-core.mjs`), the published files used as-is. |
+| `C/` | The original bare-metal C program that the JavaScript ports, not loaded by the page: `dot_runner.c`, whose `model_t`, `model_update()`, `view_update()` and `controller_read()` the code comments name, and `baremetal_binary.h`, its `B8()` macro for binary literals. |
 
 </details>
 
@@ -38,9 +39,9 @@ The code is split the way an embedded C program often is: a model (state plus th
 
 <details>
 <summary>General, Browser, HTML, JS, Preact, lit-html</summary>
-<dl><dd>
+<br>
 
-<details>
+<details open>
 <summary>General: semantic HTML, singleton, factory</summary>
 <br>
 
@@ -50,7 +51,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 
 </details>
 
-<details>
+<details open>
 <summary>Browser: DOM, import map, arrow keys</summary>
 <br>
 
@@ -60,17 +61,18 @@ The code is split the way an embedded C program often is: a model (state plus th
 
 </details>
 
-<details>
-<summary>HTML: div, span, table</summary>
+<details open>
+<summary>HTML: div, span, table, dl, dd</summary>
 <br>
 
 - **div**: a generic box with no meaning of its own, the opposite of semantic. It groups things or gives CSS and JavaScript something to find. It is a *block* element: it starts on its own line, takes the full width, and may contain almost anything, tables included. The three app containers are `<div>`s.
 - **span**: the *inline* counterpart of `div`, just as meaningless but flowing inside a line of text like a word. It may contain only text and other inline elements (`<b>`, `<code>`, `<output>`), never blocks such as `<div>` or `<table>`. Use a `div` to group blocks and a `span` to mark a few words or a value inside a line. lit-html's `render` can draw into either; the browser does not stop a `<table>` inside a `<span>`, but that is invalid HTML.
 - **table, tr, td**: a table, a row in it (*table row*), and a cell in a row (*table data*). Here 8 `<tr>` of 16 `<td>` each make the grid.
+- **dl, dd**: a list of terms and their descriptions (*description list*), and one description in it (*description details*), which follows its term in a `<dt>` (*description term*). Browsers indent a `<dd>` by 40 px, and this file uses it only for that: in the [Code walkthrough](#code-walkthrough), a `<dl><dd>` around each folder's file folds indents them under the folder. A `<dd>` with no `<dt>` is invalid HTML, but browsers and GitHub draw it; it is used because GitHub strips `style` attributes, the usual way to indent.
 
 </details>
 
-<details>
+<details open>
 <summary>JS: => (arrow function), Object.freeze, closure, class, # (private member)</summary>
 <br>
 
@@ -82,7 +84,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 
 </details>
 
-<details>
+<details open>
 <summary>Preact: signal, computed, effect</summary>
 <br>
 
@@ -92,7 +94,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 
 </details>
 
-<details>
+<details open>
 <summary>lit-html: html, container, render</summary>
 <br>
 
@@ -101,8 +103,6 @@ The code is split the way an embedded C program often is: a model (state plus th
 - **render**: writes that description into a container. On later calls it reuses the DOM it built and goes slot by slot (each `${…}`, walking into nested templates and arrays), updating only the slots whose value changed.
 
 </details>
-
-</dd></dl>
 
 </details>
 

@@ -99,7 +99,7 @@ C/             the original C program
 
 ### 1.5 Gotchas already hit (save yourself the time)
 
-- **Browser cache:** headless Chromium (and the user's browser) can serve an old `index.html` from cache after files move. Use a fresh `--user-data-dir` for tests, and tell the user to hard-reload with Cmd+Shift+R.
+- **Browser cache:** headless Chromium (and the user's browser) can serve an old `index.html` from cache after files move. Use a fresh `--user-data-dir` for tests, and tell the user to hard-reload with Ctrl+Shift+R (Mac: Cmd+Shift+R).
 - **Ports and `pkill`:** the user usually has a server on port 8000, so test on 8001 with `--bind 127.0.0.1`. To stop it, use `pkill -f '[h]ttp.server 8001'`; the brackets stop `pkill` from killing its own shell.
 - **Headless focus:** headless pages never count as focused, so the async clipboard API fails unless `Emulation.setFocusEmulationEnabled` is on.
 - **Monospace sizing:** CSS `font: 1.5em monospace` with a bare `monospace` family scales from the browser's 13 px monospace default, giving 19.5 px rather than 24 px.
@@ -120,7 +120,7 @@ C/             the original C program
 | `.checks/boundaries.py` and both hooks | Only the rule table at the top is project-specific; the hooks do not change. |
 | "Code principles" and "How to explain things" in `CLAUDE.md` | They are about this user, not this app. |
 | Conventions and development environment | Commit/push only when asked; `main` only; LF endings; uv for Python; Debian 13 setup. |
-| `.claude/rules/markdown.md` | README folding rules for any project. |
+| `.claude/rules/markdown.md` | Folding rules for any project's long Markdown documents. Only its `paths:` front matter is specific to this repo (`HOW_AND_WALKTHROUGH.md`, `docs/**/*.md`); point it at the template's `README.md`, or Claude Code never loads it there. |
 
 ### 2.2 What stays in dot-runner (not in the template)
 
@@ -156,7 +156,7 @@ vendor/                lit-html 3.3.3, @preact/signals-core 1.14.5 (copy from th
 .checks/stop-hook.sh   unchanged
 .claude/settings.json  hooks (PostToolUse, Stop, SessionStart) + permission allowlist, as here
 .claude/rules/mvc.md   the general architecture rules, with front matter  paths: ["**/*.js"]
-.claude/rules/markdown.md  copied unchanged
+.claude/rules/markdown.md  copied; only its paths: changed, to README.md
 .claude/CLAUDE.md      short: what this project is, its layout, its conventions; points to rules/mvc.md
 README.md              how to run, the architecture in brief, how the checks work
 ```
@@ -225,7 +225,7 @@ The user plans a portfolio object: each portfolio has many holdings, and each ho
 ## 5. Execution plan for a fresh session
 
 1. Read the files listed at the top, run `git status` (other sessions may be active), then ask the open decisions (§4) in one round.
-2. Create the template directory (outside this repo, for example `~/signals-lit-mvc-template`) with the §2.3 layout. Copy `vendor/` and `.claude/rules/markdown.md` unchanged, and write the skeleton files in the chosen style, using this repo's matching folder (`factory/`, `class/` or `singleton/`) as the reference.
+2. Create the template directory (outside this repo, for example `~/signals-lit-mvc-template`) with the §2.3 layout. Copy `vendor/` unchanged and `.claude/rules/markdown.md` with its `paths:` changed to `README.md` (§2.1), and write the skeleton files in the chosen style, using this repo's matching folder (`factory/`, `class/` or `singleton/`) as the reference.
 3. Rewrite `.checks/boundaries.py` for root-level files:
    - `ALLOWED_IMPORTS` keyed by plain file names (`model.js`, `view.js`, ...);
    - remove `COPIES` and the `{dir}` folder rules;
