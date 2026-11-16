@@ -66,6 +66,7 @@ Goal: as simple as possible, without saying anything false.
 - `.claude/PROGRESS.md` — latest session handoff only, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`.
 - `.gitignore`, `.gitattributes` — ignore rules; LF line endings and binary file types.
 - `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo, with the full context a new session needs; read it before working on that.
+- `STUDY_PLAN.md` — the learner's path. Each step lists README sections to read, then a small build: a hello world in a blank folder, a step counter added to each version (plus two dots in `factory/`), then an app of their own. Its exercises quote the source and its reading lists link README headings, so update it in the same change when either moves.
 - `README.md` — human-facing overview. Its Code walkthrough copies each source file in full, so update it in the same change as the file. The exceptions are `factory/model-controller-common.js` and `class/model-controller-common.js`: identical copies whose sections only point to `singleton/model-controller-common.js`.
 
 ## Conventions

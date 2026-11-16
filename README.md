@@ -2,6 +2,8 @@
 
 A small project for learning [Preact Signals](https://github.com/preactjs/signals) and [lit-html](https://lit.dev/docs/libraries/standalone-templates/). A red dot moves on a 16×8 grid in the last arrow direction you pressed, and a readout shows its position as one hex byte. The page runs this app three times, built three ways so you can compare them: a **singleton** version, where each part exists once and keeps its state at file level; a **factory** version, where `main.js` creates the parts by calling functions; and a **class** version, where `main.js` creates them with `new` from JavaScript classes. Each version lives in its own folder and shares no code with the others. There is no npm and no build step: the browser loads both libraries as ES modules straight from `vendor/`.
 
+To learn by building, from a hello world to an app of your own, follow [STUDY_PLAN.md](STUDY_PLAN.md).
+
 ## Run
 
 <details>
