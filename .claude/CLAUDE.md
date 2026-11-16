@@ -64,6 +64,7 @@ Goal: as simple as possible, without saying anything false.
 - `.claude/rules/markdown.md` — how to write README.md and docs/: which `##` sections fold, and how. Claude Code loads it by itself when working on those files.
 - `.claude/PROGRESS.md` — latest session handoff only, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`.
 - `.gitignore`, `.gitattributes` — ignore rules; LF line endings and binary file types.
+- `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo, with the full context a new session needs; read it before working on that.
 - `README.md` — human-facing overview. Its Code walkthrough copies each source file in full, so update it in the same change as the file. The exception is `factory/model-controller-common.js`: an identical copy whose section only points to `singleton/model-controller-common.js`.
 
 ## Conventions
