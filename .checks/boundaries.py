@@ -17,11 +17,11 @@ ROOT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().pare
 # to such paths; {dir} is the importing file's own folder. A .js file matching no key is itself
 # a violation.
 ALLOWED_IMPORTS = {
-    "model-controller-common.js": set(),
-    "view.js": {"lit-html"},
-    "*/model.js": {"@preact/signals-core", "model-controller-common.js"},
-    "*/controller.js": {"model-controller-common.js"},
-    "*/main.js": {"@preact/signals-core", "view.js", "{dir}/model.js", "{dir}/controller.js"},
+    "*/model-controller-common.js": set(),
+    "*/view.js": {"lit-html"},
+    "*/model.js": {"@preact/signals-core", "{dir}/model-controller-common.js"},
+    "*/controller.js": {"{dir}/model-controller-common.js"},
+    "*/main.js": {"@preact/signals-core", "{dir}/view.js", "{dir}/model.js", "{dir}/controller.js"},
 }
 
 # (pattern, path globs where it may appear, the rule it protects). A tripwire for honest mistakes,
@@ -37,13 +37,16 @@ RULES = [
     (r"\.update\b|\[\s*['\"]update['\"]\s*\]", {"*/main.js"}, "only main.js uses model.update"),
     # let/var, or a const holding an array, object or new instance (Object.freeze(...) is fine)
     (r"^(?:export\s+)?(?:let|var)\b|^(?:export\s+)?const\s+[\w$]+\s*=\s*(?:\[|\{|new\b)",
-     {"*/main.js", "singleton/*", "mixed/controller.js"},
-     "file-level changing state only in singleton/ and mixed/controller.js (factory parts keep it inside the factory)"),
-    (r"\bviewUpdate\b", {"view.js", "*/main.js"}, "only main.js uses viewUpdate"),
+     {"*/main.js", "singleton/*"},
+     "file-level changing state only in singleton/ (factory parts keep it inside the factory)"),
+    (r"\b(?:viewUpdate|createView)\b", {"*/view.js", "*/main.js"}, "only main.js uses the view"),
 ]
 
 # Deliberate copies that must stay byte-identical (the README walkthrough only points to the original).
-COPIES = {"mixed/model.js": "factory/model.js", "mixed/controller.js": "singleton/controller.js"}
+COPIES = {"factory/model-controller-common.js": "singleton/model-controller-common.js"}
+
+# A redraw call: viewUpdate(...) in singleton/, view.update(...) in factory/.
+REDRAW = r"\b(?:viewUpdate|view\.update)\s*\("
 
 # import ... from 'x', export ... from 'x', import 'x', import('x')
 IMPORTS = re.compile(r"""\b(?:import|export)\b[^'";]*?\bfrom\s*['"]([^'"]+)['"]"""
@@ -76,9 +79,9 @@ def check(file):
         for pattern, globs, rule in RULES:
             if not matches(path, globs) and re.search(pattern, line):
                 yield f"{path}:{n}: {rule}: {line.strip()}"
-        if (fnmatchcase(path, "*/main.js") and re.search(r"\bviewUpdate\s*\(", line)
-                and not re.search(r"\beffect\s*\(.*\bviewUpdate\s*\(", line)):
-            yield f"{path}:{n}: call viewUpdate inside effect(...) on one line, or the screen goes stale: {line.strip()}"
+        if (fnmatchcase(path, "*/main.js") and re.search(REDRAW, line)
+                and not re.search(r"\beffect\s*\(.*" + REDRAW, line)):
+            yield f"{path}:{n}: call the view inside effect(...) on one line, or the screen goes stale: {line.strip()}"
 
 
 files = sorted(p for p in ROOT.rglob("*.js")

@@ -1,5 +1,5 @@
 import { signal, computed } from '@preact/signals-core';
-import { Cmd } from '../model-controller-common.js';
+import { Cmd } from './model-controller-common.js';
 
 const WIDTH = 16, HEIGHT = 8;               // grid size, owned by the model
 const row = signal(4), col = signal(7);     // file-level, like static variables in C

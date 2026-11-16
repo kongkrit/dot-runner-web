@@ -1,6 +1,6 @@
 # Dot runner
 
-A small project for learning [Preact Signals](https://github.com/preactjs/signals) and [lit-html](https://lit.dev/docs/libraries/standalone-templates/). A red dot moves on a 16×8 grid in the last arrow direction you pressed, and a readout shows its position as one hex byte. The page runs this app three times, built three ways so you can compare them: a **singleton** version, where each part exists once and keeps its state at file level; a **factory** version, where `main.js` creates the parts; and a **mixed** version with a singleton controller and a factory model. There is no npm and no build step: the browser loads both libraries as ES modules straight from `vendor/`.
+A small project for learning [Preact Signals](https://github.com/preactjs/signals) and [lit-html](https://lit.dev/docs/libraries/standalone-templates/). A red dot moves on a 16×8 grid in the last arrow direction you pressed, and a readout shows its position as one hex byte. The page runs this app twice, built two ways so you can compare them: a **singleton** version, where each part exists once and keeps its state at file level, and a **factory** version, where `main.js` creates the parts. Each version lives in its own folder and shares no code with the other. There is no npm and no build step: the browser loads both libraries as ES modules straight from `vendor/`.
 
 ## Run
 
@@ -12,7 +12,7 @@ A small project for learning [Preact Signals](https://github.com/preactjs/signal
 uv run --no-project python -m http.server 8000
 ```
 
-Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. Ctrl+C stops the server.
+Open <http://localhost:8000>. Arrow keys move both dots, Space stops them. Ctrl+C stops the server.
 
 - **Why a server:** Chrome refuses to load ES modules (`<script type="module">`) from a `file://` page, so opening `index.html` directly shows the headings but no grids.
 - **Why `--no-project`:** uv skips looking for a `pyproject.toml` and creates no venv. It just runs Python's built-in file server.
@@ -28,22 +28,21 @@ Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. 
 <summary>Model, view, controller, main loop; what each file holds</summary>
 <br>
 
-The code is split the way an embedded C program often is: a model (state plus the rule that changes it), a view (draws the state), a controller (reads the keys), and a main loop that feeds the controller's input to the model on a timer. Comments in the code name the C counterpart of each piece (`model_t`, `model_update()`, `view_update()`, `controller_read()`). The model, controller and main exist three times, in `singleton/`, `factory/` and `mixed/`, with the same file names; all versions share `model-controller-common.js` and `view.js`.
+The code is split the way an embedded C program often is: a model (state plus the rule that changes it), a view (draws the state), a controller (reads the keys), and a main loop that feeds the controller's input to the model on a timer. Comments in the code name the C counterpart of each piece (`model_t`, `model_update()`, `view_update()`, `controller_read()`). The app exists twice, in `singleton/` and `factory/`. Each folder holds all five files under the same names and imports nothing from the other; only `vendor/` is shared.
 
 | File | Role |
 |------|------|
-| `index.html` | Page shell: the import map, the grid's CSS, the empty `#app-singleton`, `#app-factory` and `#app-mixed` containers, and one module script per version. |
-| `model-controller-common.js` | The `Cmd` table: the message the controller sends to the model, shared by those two only, like the C `command` enum. |
-| `view.js` | `viewUpdate(m, container)`: renders a lit-html template of the model's grid (its `width` × `height`) and the hex readout into the container. Reads signals, writes none. Imports nothing from any version, so all three share it. |
+| `index.html` | Page shell: the import map, the grid's CSS, the empty `#app-singleton` and `#app-factory` containers, and one module script per version. |
+| `singleton/model-controller-common.js` | The `Cmd` table: the message the controller sends to the model, shared by those two only, like the C `command` enum. |
+| `singleton/view.js` | `viewUpdate(m, container)`: renders a lit-html template of the model's grid (its `width` × `height`) and the hex readout into the container. Reads signals, writes none. |
 | `singleton/model.js` | Grid size, state and update rule: `WIDTH`, `HEIGHT`, the `row` and `col` signals and `cmd` at file level, and the one `model` object with `width`, `height`, read-only `row`, `col` and `hex` computeds, and `update(c)`. No DOM. |
 | `singleton/controller.js` | Input: a file-level `pending` latch, and the one `controller` object with `keydown(e)`, which latches a key, and `read()`, which hands the tick the latest key and clears it. |
 | `singleton/main.js` | Wiring: `keydown` → `controller.keydown`, a 150 ms timer → `model.update(controller.read())`, `effect` → `viewUpdate` into `#app-singleton`. |
+| `factory/model-controller-common.js` | A byte-identical copy of `singleton/model-controller-common.js`, so the two folders share no file. |
+| `factory/view.js` | The same template, behind `createView(container)`: each view keeps the container it draws into, and `view.update(m)` draws. |
 | `factory/model.js` | The same model built by `createModel()`, so each call gives a new, independent one. |
 | `factory/controller.js` | The same controller built by `createController()`, each with its own latch. |
-| `factory/main.js` | The same wiring, after creating one model and one controller; draws into `#app-factory`. |
-| `mixed/model.js` | A copy of `factory/model.js`: the model is made by `createModel()`. |
-| `mixed/controller.js` | A copy of `singleton/controller.js`: the one controller with a file-level latch. |
-| `mixed/main.js` | The same wiring, after creating one model; imports the ready-made controller; draws into `#app-mixed`. |
+| `factory/main.js` | The same wiring, after creating one model, one view and one controller; draws into `#app-factory`. |
 | `vendor/` | lit-html 3.3.3 (`lit-html.js`) and @preact/signals-core 1.14.5 (`signals-core.mjs`, the package's `dist/signals-core.mjs`), the published files used as-is. |
 
 </details>
@@ -74,7 +73,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 - **effect** (Preact): a function that runs immediately, then again whenever a signal it read on its last run changes.
   ***
 - **html** (lit-html): a tag written in front of a backtick string, a *tagged template literal* (see the `view.js` walkthrough). It returns a description of the DOM and does not touch the page.
-- **container** (lit-html): the element that `render` draws into, here `<div id="app-singleton">`, `<div id="app-factory">` or `<div id="app-mixed">`. The rest of the page is untouched.
+- **container** (lit-html): the element that `render` draws into, here `<div id="app-singleton">` or `<div id="app-factory">`. The rest of the page is untouched.
 - **render** (lit-html): writes that description into a container. On later calls it reuses the DOM it built and goes slot by slot (each `${…}`, walking into nested templates and arrays), updating only the slots whose value changed.
 
 </details>
@@ -85,12 +84,12 @@ The code is split the way an embedded C program often is: a model (state plus th
 <summary>Key press, tick, write, redraw, hex packing</summary>
 <br>
 
-All three apps run this same sequence, each with its own controller, model and tick.
+Both apps run this same sequence, each with its own controller, model, view and tick.
 
 1. **Key press.** The browser calls `controller.keydown` (the controller's method, registered in `main.js`), which stores the command in the controller's `pending` latch. The browser pushes events rather than waiting to be polled, so the key waits in `pending` until the next tick reads it. If two keys arrive within one tick, the last one wins.
 2. **Tick.** Every 150 ms (about 6.7 steps per second) `setInterval` calls `model.update(controller.read())`; `read` returns `pending` and clears it. `update` remembers the last real command in a plain variable `cmd`, so the dot keeps moving with no key held. `cmd` is not a signal because nothing on screen shows it. Edges wrap: from column 15, RIGHT goes to column 0.
 3. **Write.** `update` writes a new value to `col` or `row`. After Space, it writes nothing, so nothing re-renders.
-4. **Redraw.** On its last run the effect in `main.js` read `row`, `col` and `hex` (through `viewUpdate`), so it re-runs `viewUpdate(model, container)`. Its `template(m)` rebuilds the whole description: 128 cells. `render` then changes only what differs, which for one step is the `class` of two `<td>` cells and the `<output>` text. The saving is in DOM work, not in JavaScript work.
+4. **Redraw.** On its last run the effect in `main.js` read `row`, `col` and `hex` (through the view), so it re-runs the redraw: `viewUpdate(model, container)` in the singleton, `view.update(model)` in the factory. The view's `template(m)` rebuilds the whole description: 128 cells. `render` then changes only what differs, which for one step is the `class` of two `<td>` cells and the `<output>` text. The saving is in DOM work, not in JavaScript work.
 
 The readout packs the position into one byte: `hex = (row << 4) | col`. Column 0–15 fills the low 4 bits and row 0–7 the next 3, so the range is `00`–`7F`. Example: the start position, row 4 and column 7, gives `(4 << 4) | 7 = 0x40 | 0x07 = 0x47`, shown as `47`.
 
@@ -98,12 +97,12 @@ The readout packs the position into one byte: `hex = (row << 4) | col`. Column 0
 
 ## Code walkthrough
 
-Each file in full, cut into short parts, each part followed by its notes. The shared files come first, then the singleton version, then the factory version, whose notes explain only what differs, then `mixed/`, which combines one part from each. The notes cover the HTML, CSS and JavaScript as well as the two libraries, so knowing C is enough to follow them. Each file's notes open with the library names it uses, tagged (Preact) or (lit-html), and those names are bold where the notes explain them; everything else is plain HTML, CSS or JavaScript. [How it works](#how-it-works) defines the terms.
+Each file in full, cut into short parts, each part followed by its notes. `index.html` comes first, then the singleton version, then the factory version, whose notes explain only what differs. The notes cover the HTML, CSS and JavaScript as well as the two libraries, so knowing C is enough to follow them. Each file's notes open with the library names it uses, tagged (Preact) or (lit-html), and those names are bold where the notes explain them; everything else is plain HTML, CSS or JavaScript. [How it works](#how-it-works) defines the terms.
 
 ### `index.html`
 
 <details>
-<summary>Page tree, import map, CSS rules, three containers, three module scripts</summary>
+<summary>Page tree, import map, CSS rules, two containers, two module scripts</summary>
 <br>
 
 Library names: none. The import map only tells the browser where the two libraries live.
@@ -152,22 +151,25 @@ Library names: none. The import map only tells the browser where the two librari
   <div id="app-singleton"></div>
   <h2>factory</h2>
   <div id="app-factory"></div>
-  <h2>mixed</h2>
-  <div id="app-mixed"></div>
   <script type="module" src="./singleton/main.js"></script>
   <script type="module" src="./factory/main.js"></script>
-  <script type="module" src="./mixed/main.js"></script>
 </body>
 </html>
 ```
 
 - `<p>` is a paragraph of text: the instruction line. `<h2>` is a second-level heading, here the label above each app.
-- `<div id="app-singleton">`, `<div id="app-factory">` and `<div id="app-mixed">` are empty `<div>`s, the three containers. `id` gives an element a name unique in the page, and `#app-singleton` is the CSS selector for it. JavaScript draws one app into each box.
-- `<script type="module" src="./singleton/main.js">` loads `singleton/main.js` as a module: a file with its own scope, which shares only the names it `export`s and gets other files' names with `import`. That is close to a C file where everything is `static` except what it exports, but there is no linker: the browser fetches each imported file by URL while loading. A module script also waits until the whole page is parsed, so the containers exist by the time it runs. Each of the three scripts starts one app; its imports pull in that version's `model.js` and `controller.js`, the shared `view.js` and `model-controller-common.js`, and the libraries.
+- `<div id="app-singleton">` and `<div id="app-factory">` are empty `<div>`s, the two containers. `id` gives an element a name unique in the page, and `#app-singleton` is the CSS selector for it. JavaScript draws one app into each box.
+- `<script type="module" src="./singleton/main.js">` loads `singleton/main.js` as a module: a file with its own scope, which shares only the names it `export`s and gets other files' names with `import`. That is close to a C file where everything is `static` except what it exports, but there is no linker: the browser fetches each imported file by URL while loading. A module script also waits until the whole page is parsed, so the containers exist by the time it runs. Each of the two scripts starts one app; its imports pull in the other four files of that version's folder, and the libraries.
 
 </details>
 
-### `model-controller-common.js`
+### `singleton/`
+
+<details>
+<summary>model-controller-common.js, view.js, model.js, controller.js, main.js: each part exists once</summary>
+<dl><dd>
+
+#### `model-controller-common.js`
 
 <details>
 <summary>The command table, shared by model and controller</summary>
@@ -180,13 +182,13 @@ Library names: none.
 export const Cmd = Object.freeze({ NONE: 0, STOP: 1, LEFT: 2, RIGHT: 3, UP: 4, DOWN: 5 });
 ```
 
-- `//` starts a comment that runs to the end of the line, as in C. This file holds only what the model and the controller both need: the commands, the message one sends to the other. Your C code marks its `command` enum the same way, as the MODEL-CONTROLLER message. The view never imports it.
+- `//` starts a comment that runs to the end of the line, as in C. This file holds only what the model and the controller both need: the commands, the message one sends to the other. Your C code marks its `command` enum the same way, as the MODEL-CONTROLLER message. The view never imports it. `factory/` has its own identical copy, so neither folder imports from the other.
 - `export const Cmd` makes `Cmd` visible to other modules. `const` declares a name that cannot be reassigned, like `T * const p` in C: when the value is an object, the name always refers to that object, but the object itself could still be changed, unless it is frozen as `Cmd` is.
 - `Object.freeze({ NONE: 0, … })` stands in for a C `enum`, which JavaScript lacks. `{ NONE: 0, … }` is an object literal: a table of named fields, each with a value. It is frozen (see [Terms](#terms)), so `Cmd.UP = 9` throws a `TypeError`. The numbers only need to be distinct.
 
 </details>
 
-### `view.js`
+#### `view.js`
 
 <details>
 <summary>Imports, range helper, tagged templates, rows and cells, class slot, hex text, viewUpdate</summary>
@@ -198,7 +200,7 @@ Library names: **`html`** and **`render`** (lit-html), **`.value`** (Preact). In
 import { html, render } from 'lit-html';
 ```
 
-- `import { html, render } from 'lit-html'` takes two exported names from a module. A bare name like `lit-html` goes through the import map to a file in `vendor/`. **`html`** is lit-html's template tag and **`render`** writes a template into the page; both are explained below. This is the only file that imports lit-html, and it imports nothing from either version: even the grid size comes from the model it is given.
+- `import { html, render } from 'lit-html'` takes two exported names from a module. A bare name like `lit-html` goes through the import map to a file in `vendor/`. **`html`** is lit-html's template tag and **`render`** writes a template into the page; both are explained below. This is the only file in its folder that imports lit-html, and it imports nothing else: even the grid size comes from the model it is given.
 - lit-html 3.3.3 exports more than `html` and `render`: **`svg`** and **`mathml`**, template tags like `html` for SVG graphics and MathML math markup; **`nothing`**, a value that renders as empty; and **`noChange`**, a value that leaves a slot as it was, used mostly when writing directives (add-ons that control how a slot updates). It also exports `_$LH`, which is internal to Lit's own packages. The [Templates API page](https://lit.dev/docs/api/templates/) documents `html`, `svg`, `render` and `nothing`; the [lit-html 3.3.3 declaration file](https://cdn.jsdelivr.net/npm/lit-html@3.3.3/lit-html.d.ts) lists every export, types included. lit.dev writes imports as `from 'lit'`; the `lit` package re-exports `lit-html`, so the names are the same. Ready-made directives such as `repeat` live in separate `lit-html/directives/…` files, which this project has not vendored.
 
 ```js
@@ -220,7 +222,7 @@ const template = m => html`
 - `` const template = m => html`…` `` is a function from the model to a description of the page. It reads signals and writes none. It is not exported: other files draw through `viewUpdate` below.
 - `` html`…` `` is a tagged template literal. A template literal is a string in backticks where `${expr}` inserts the value of any JavaScript expression. With a function name in front, the tag, JavaScript builds no string: it calls the function with the fixed text pieces and the `${…}` values separately. **`html`** keeps the pieces as the template and each value as a slot. The pieces array is the same object each time a given template in the source runs, which is how **`render`** (below) recognizes the last frame's template and fills its slots instead of rebuilding it.
 - `` range(m.height).map(r => html`<tr>…</tr>`) ``: `.map` calls the function on each element and returns a new array of the results, here `m.height` row templates of `m.width` cell templates each, 8 × 16 with the model's numbers. An array in a slot renders its items in order, matched to the last frame's items by position. The counts never change, so every cell is reused.
-- `class=${r === m.row.value && c === m.col.value ? 'on' : ''}` is an attribute slot: it sets the cell's `class` to `on` or to an empty string, and the `.matrix td.on` rule in `index.html` paints it red. `===` is strict equality, and `? :` is the same as in C. These **`.value`** reads are what subscribe the effect in each `main.js`, because `viewUpdate` runs inside it.
+- `class=${r === m.row.value && c === m.col.value ? 'on' : ''}` is an attribute slot: it sets the cell's `class` to `on` or to an empty string, and the `.matrix td.on` rule in `index.html` paints it red. `===` is strict equality, and `? :` is the same as in C. These **`.value`** reads are what subscribe the effect in `main.js`, because `viewUpdate` runs inside it.
 - `<output>${m.hex.value.toString(16).toUpperCase().padStart(2, '0')}</output>`: `<output>` is the semantic element for a computed result. The chain does what `printf("%02X", hex)` does in C: base-16 text, upper case, padded to two characters with `0`. Example: row 0, column 10 gives 10 → `a` → `A` → `0A`.
 
 ```js
@@ -229,16 +231,10 @@ export function viewUpdate(m, container) {   // view_update()
 }
 ```
 
-- `export function viewUpdate(m, container)` draws the model into `container` once and returns: **`render`** writes `template(m)` there, and on later calls changes only what differs from the last frame. It is the only name other files see, so lit-html stays a detail of this file. Redrawing on every change is not its job: each `main.js` calls it inside an `effect`.
-- All three versions share this one view. It never imports a model; it only reads `m.width`, `m.height`, `m.row`, `m.col` and `m.hex` from whatever it is given, and both models have those five fields.
+- `export function viewUpdate(m, container)` draws the model into `container` once and returns: **`render`** writes `template(m)` there, and on later calls changes only what differs from the last frame. It is the only name other files see, so lit-html stays a detail of this file. Redrawing on every change is not its job: `main.js` calls it inside an `effect`.
+- It never imports a model; it only reads `m.width`, `m.height`, `m.row`, `m.col` and `m.hex` from whatever it is given.
 
 </details>
-
-### `singleton/`
-
-<details>
-<summary>model.js, controller.js, main.js: each part exists once</summary>
-<dl><dd>
 
 #### `model.js`
 
@@ -250,11 +246,11 @@ Library names: **`signal`**, **`computed`** and **`.value`** (Preact).
 
 ```js
 import { signal, computed } from '@preact/signals-core';
-import { Cmd } from '../model-controller-common.js';
+import { Cmd } from './model-controller-common.js';
 ```
 
 - `import { signal, computed } from '@preact/signals-core'` takes Preact's two building blocks, by bare name as in `view.js`. The model is built from these alone. Nothing in this file touches the page.
-- `'../model-controller-common.js'` is a relative path, which starts with `./` (this file's folder) or `../` (the folder above). Here it is the shared file at the root, which provides `Cmd`.
+- `'./model-controller-common.js'` is a relative path, which starts with `./` (this file's folder) or `../` (the folder above). Here it is this folder's own file, which provides `Cmd`.
 - @preact/signals-core 1.14.5 exports more: **`effect`** (used in each `main.js`); **`batch`**, which groups several writes so that effects run once, at the end; **`untracked`**, which reads signals without subscribing; **`action`**, which wraps a function so that each call runs batched and untracked; and **`createModel`**, a helper for building models out of signals. That last one is unrelated to `factory/model.js`'s own `createModel`, a plain function of the same name. It also exports the classes `Signal`, `Computed` and `Effect`, which `signal()`, `computed()` and `effect()` create. The [signals-core 1.14.5 README](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#guide--api) documents all of the functions except `action`, which it mentions only under `createModel`.
 
 ```js
@@ -311,10 +307,10 @@ export const model = {
 Library names: none.
 
 ```js
-import { Cmd } from '../model-controller-common.js';
+import { Cmd } from './model-controller-common.js';
 ```
 
-- The commands are the message from the controller to the model, so they are defined once, in `model-controller-common.js`, which the two share, and imported here.
+- The commands are the message from the controller to the model, so they are defined once per folder, in `model-controller-common.js`, which the two share, and imported here.
 
 ```js
 const KEYMAP = Object.freeze({ ArrowUp: Cmd.UP, ArrowDown: Cmd.DOWN, ArrowLeft: Cmd.LEFT,
@@ -370,11 +366,11 @@ import { effect } from '@preact/signals-core';
 
 ```js
 import { model } from './model.js';
-import { viewUpdate } from '../view.js';
+import { viewUpdate } from './view.js';
 import { controller } from './controller.js';
 ```
 
-- `model` and `controller` are the ready-made objects from this folder, and `viewUpdate` comes from the shared `../view.js`. Importing them is all it takes: the parts already exist.
+- All three come from this folder: `model` and `controller` are ready-made objects, and `viewUpdate` is a plain function. Importing them is all it takes: the parts already exist.
 
 ```js
 window.addEventListener('keydown', controller.keydown);  // the browser calls it on each key press
@@ -405,8 +401,66 @@ effect(() => viewUpdate(model, document.querySelector('#app-singleton')));  // r
 ### `factory/`
 
 <details>
-<summary>model.js, controller.js, main.js: main.js creates the parts</summary>
+<summary>model-controller-common.js, view.js, model.js, controller.js, main.js: main.js creates the parts</summary>
 <dl><dd>
+
+#### `model-controller-common.js`
+
+<details>
+<summary>Identical to singleton/model-controller-common.js</summary>
+<br>
+
+`factory/model-controller-common.js` is a byte-for-byte copy of `singleton/model-controller-common.js` (the first section in the singleton fold above): the same frozen `Cmd` table. Each folder has its own copy so that neither imports from the other. The boundary check fails if the two ever differ, so read that section.
+
+</details>
+
+#### `view.js`
+
+<details>
+<summary>What changes from the singleton: createView, the container kept per view</summary>
+<br>
+
+Library names: **`html`** and **`render`** (lit-html), **`.value`** (Preact). Only what differs from `singleton/view.js` is explained here.
+
+```js
+import { html, render } from 'lit-html';
+```
+
+- The same import as `singleton/view.js`.
+
+```js
+const range = n => [...Array(n).keys()];
+```
+
+- The same `range` helper.
+
+```js
+const template = m => html`
+  <table class="matrix">
+    ${range(m.height).map(r => html`<tr>
+      ${range(m.width).map(c => html`<td class=${r === m.row.value && c === m.col.value ? 'on' : ''}></td>`)}
+    </tr>`)}
+  </table>
+  <output>${m.hex.value.toString(16).toUpperCase().padStart(2, '0')}</output>`;
+```
+
+- The same template, so both versions draw the same grid and readout. It stays at file level: it is a function that holds no state, so every view can share it.
+
+```js
+export function createView(container) {     // each view keeps only where it draws
+  return {
+    update(m) {                             // view_update()
+      render(template(m), container);
+    },
+  };
+}
+```
+
+- `export function createView(container)` is a factory, the simplest one in this folder: the only thing each view keeps is `container`, the element it draws into, which `main.js` passes in once. `update` reaches it later through a closure (see [Terms](#terms)), so `main.js` no longer hands over the container on every redraw.
+- `update(m)` does what the singleton's `viewUpdate(m, container)` does. The model is still passed on every call, as in the C `view_update(mp)`. The last three lines close `update`, the returned object and `createView`.
+- `container` never changes, so a factory view gives each app no state the singleton view lacked: it changes how `main.js` wires things, not what each app remembers. The view's one piece of memory lives in lit-html: **`render`** stores the DOM it built on the container element itself, so each container already has its own, with the singleton's `viewUpdate` too. A factory view would start to matter once the view kept memory of its own, such as a blink timer or the dot's last position for an animation.
+
+</details>
 
 #### `model.js`
 
@@ -418,7 +472,7 @@ Library names: **`signal`**, **`computed`** and **`.value`** (Preact). Only what
 
 ```js
 import { signal, computed } from '@preact/signals-core';
-import { Cmd } from '../model-controller-common.js';
+import { Cmd } from './model-controller-common.js';
 ```
 
 - The same imports as `singleton/model.js`.
@@ -442,7 +496,7 @@ export function createModel() {
 
 - `export function createModel()` is a factory: each call builds a fresh model and returns it. The singleton's file-level state (`row`, `col`, `cmd`) moved inside this function, so nothing is created until someone calls it, and every call creates a new set.
 - `row`, `col` and `cmd` are now local to `createModel`, yet the functions created inside it keep using them after it returns. That is a closure (see [Terms](#terms)), and each `createModel()` call gets its own set.
-- `return {` hands back an object literal with the same fields as the singleton's `model`, `width` and `height` included, which is why the shared view works with either.
+- `return {` hands back an object literal with the same fields as the singleton's `model`, `width` and `height` included, which is why the same view template works with either.
 
 ```js
     update(c) {                             // model_update()
@@ -471,7 +525,7 @@ export function createModel() {
 Library names: none. Only what differs from `singleton/controller.js` is explained here.
 
 ```js
-import { Cmd } from '../model-controller-common.js';
+import { Cmd } from './model-controller-common.js';
 ```
 
 - The same import as `singleton/controller.js`.
@@ -516,7 +570,7 @@ export function createController() {
 #### `main.js`
 
 <details>
-<summary>What changes from the singleton: creating the model and the controller</summary>
+<summary>What changes from the singleton: creating the model, the view and the controller</summary>
 <br>
 
 Library names: **`effect`** (Preact). Only what differs from `singleton/main.js` is explained here.
@@ -529,18 +583,19 @@ import { effect } from '@preact/signals-core';
 
 ```js
 import { createModel } from './model.js';
-import { viewUpdate } from '../view.js';
+import { createView } from './view.js';
 import { createController } from './controller.js';
 ```
 
-- This version imports the factories, `createModel` and `createController`, instead of ready-made objects.
+- This version imports the factories, `createModel`, `createView` and `createController`, instead of ready-made objects and a plain function.
 
 ```js
 const model = createModel();
+const view = createView(document.querySelector('#app-factory'));
 const controller = createController();
 ```
 
-- `const model = createModel()` and `const controller = createController()` are the real difference from `singleton/main.js`: here this file decides that there is one of each. A second pair of calls would give a second, independent app.
+- These three calls are the real difference from `singleton/main.js`: here this file decides that there is one of each. The view is told its container once, here, so the redraw below no longer looks it up. A second set of calls, with a second container, would give a second, independent app.
 
 ```js
 window.addEventListener('keydown', controller.keydown);  // the browser calls it on each key press
@@ -557,90 +612,10 @@ setInterval(() => {                          // the NMI tick
 - The same tick as `singleton/main.js`.
 
 ```js
-effect(() => viewUpdate(model, document.querySelector('#app-factory')));  // redraw only on change
+effect(() => view.update(model));            // redraw only on change
 ```
 
-- The same redraw effect as `singleton/main.js`, drawing into `#app-factory` instead.
-
-</details>
-
-</dd></dl>
-
-</details>
-
-### `mixed/`
-
-<details>
-<summary>model.js, controller.js, main.js: singleton controller, factory model</summary>
-<dl><dd>
-
-#### `model.js`
-
-<details>
-<summary>Identical to factory/model.js</summary>
-<br>
-
-`mixed/model.js` is a byte-for-byte copy of `factory/model.js` (the `model.js` section in the factory fold above): the model is made by `createModel()`, a new one per call. The boundary check fails if the two ever differ, so read that section.
-
-</details>
-
-#### `controller.js`
-
-<details>
-<summary>Identical to singleton/controller.js</summary>
-<br>
-
-`mixed/controller.js` is a byte-for-byte copy of `singleton/controller.js` (the `controller.js` section in the singleton fold above): the one controller, built when the file loads, with its `pending` latch at file level. It is a separate file, so its latch is separate too, and all three apps receive every key. The boundary check fails if the two ever differ, so read that section.
-
-</details>
-
-#### `main.js`
-
-<details>
-<summary>What changes: create the model, import the controller</summary>
-<br>
-
-Library names: **`effect`** (Preact). Only what differs from the other two `main.js` files is explained here.
-
-```js
-import { effect } from '@preact/signals-core';
-```
-
-- The same import as the other two.
-
-```js
-import { createModel } from './model.js';
-import { viewUpdate } from '../view.js';
-import { controller } from './controller.js';
-```
-
-- `createModel` is this folder's factory, and `controller` is this folder's ready-made singleton object.
-
-```js
-const model = createModel();
-```
-
-- `const model = createModel()` is the one creation line. The model is made here, while the controller already exists because its file built it when it loaded. Compared with `singleton/main.js` this line is added; compared with `factory/main.js` the `createController()` line is gone.
-
-```js
-window.addEventListener('keydown', controller.keydown);  // the browser calls it on each key press
-```
-
-- The same listener as the other two.
-
-```js
-setInterval(() => {                          // the NMI tick
-  model.update(controller.read());
-}, 150);
-```
-
-- The same tick as the other two.
-
-```js
-effect(() => viewUpdate(model, document.querySelector('#app-mixed')));  // redraw only on change
-```
-
-- The same redraw effect, drawing into `#app-mixed`.
+- The same redraw effect as `singleton/main.js`, now calling the view's `update` with the model. The view already knows it draws into `#app-factory`.
 
 </details>
 
@@ -654,7 +629,7 @@ effect(() => viewUpdate(model, document.querySelector('#app-mixed')));  // redra
 <summary>Plain difference, the C comparison, obvious and subtle differences, pros and cons, which to use</summary>
 <br>
 
-The two versions behave identically here: same object shape, same output. The difference is **when the state is created and how many copies can exist**. A singleton gets exactly one copy, created automatically the first time any file imports it. A factory makes a new, independent copy every time `main.js` calls `createModel()`.
+The two versions behave identically here: same model and controller objects, same output. The difference is **when the state is created and how many copies can exist**. A singleton gets exactly one copy, created automatically the first time any file imports it. A factory makes a new, independent copy every time `main.js` calls `createModel()`.
 
 The C original already uses both styles. `controller_read()` keeps its state in `static` variables, so exactly one exists: singleton-style. The model is factory-style: `model_t` is a struct, `model_init(mp)` initializes one, and `model_update(mp, c)` works on whichever one it is given. The JavaScript factory does the same, but instead of passing a pointer, each `update` remembers its own state through a closure (see [Terms](#terms)).
 
@@ -733,7 +708,7 @@ Use a **singleton** for things the physical world limits to one: one keyboard, o
 2. `return` the object;
 3. have `main.js` call that function.
 
-`mixed/` is this advice applied: a singleton controller for the one keyboard and a factory model, so a second model (a second player, say) would take one more `createModel()` call. Neither choice locks you in.
+Neither choice locks you in.
 
 </details>
 
@@ -752,7 +727,7 @@ Use a **singleton** for things the physical world limits to one: one keyboard, o
 | `.claude/skills/wrapup/SKILL.md` | `/wrapup` rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one, then commits. It runs only when you type it. |
 | `.claude/rules/markdown.md` | How to write README.md and docs/: which `##` sections fold. Claude Code loads it when working on those files. |
 | `.claude/PROGRESS.md` | Latest session handoff, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`. |
-| `.checks/boundaries.py` | Checks the MVC boundaries in CLAUDE.md's Architecture rules: who may import what; browser globals and `effect` only in `main.js`; signal writes only in `model.js`; `model.update` and `viewUpdate` used only from `main.js`; file-level changing state only in `singleton/` and `mixed/controller.js`; `mixed/model.js` and `mixed/controller.js` identical to the files they copy. Run `uv run --no-project python .checks/boundaries.py`. The `PostToolUse` hook runs it after every Edit or Write and tells Claude Code what it broke; it can't undo the edit, and shell edits skip it. |
+| `.checks/boundaries.py` | Checks the MVC boundaries in CLAUDE.md's Architecture rules: who may import what, each folder only from itself; browser globals and `effect` only in `main.js`; signal writes only in `model.js`; `model.update` and the view used only from `main.js`; file-level changing state only in `singleton/`; the two `model-controller-common.js` copies identical. Run `uv run --no-project python .checks/boundaries.py`. The `PostToolUse` hook runs it after every Edit or Write and tells Claude Code what it broke; it can't undo the edit, and shell edits skip it. |
 | `.checks/stop-hook.sh` | The `Stop` hook: runs the same check when Claude Code tries to finish a turn and, on a violation, sends it back to fix the code first. If the violation survives one round, it lets the turn end but shows you a warning, so it can't loop forever. |
 | `.gitignore` | OS cruft, Python/uv venv, editor files. |
 | `.gitattributes` | LF line endings; binary file types; no line diffs for the minified `vendor/` files. |

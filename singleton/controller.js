@@ -1,4 +1,4 @@
-import { Cmd } from '../model-controller-common.js';
+import { Cmd } from './model-controller-common.js';
 
 const KEYMAP = Object.freeze({ ArrowUp: Cmd.UP, ArrowDown: Cmd.DOWN, ArrowLeft: Cmd.LEFT,
                                ArrowRight: Cmd.RIGHT, ' ': Cmd.STOP });
