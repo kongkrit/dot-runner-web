@@ -1,6 +1,6 @@
 # Proposal: extract a reusable MVC template (Preact Signals + lit-html)
 
-**Status:** proposal, nothing built yet. Written 2026-11-16 and last updated at commit `d3af8f6` of this repo (`dot-runner-web`).
+**Status:** proposal, nothing built yet. Written 2026-11-16. Describes the code as of commit `d3af8f6` of this repo (`dot-runner-web`), and the README as of its "Singleton vs factory vs class" revision.
 **Audience:** a fresh Claude Code session with no memory of the conversation that produced this repo. Everything you need is here or in the files it names. Where this document and `.claude/CLAUDE.md` ever disagree, `CLAUDE.md` is the source of truth for the current code.
 **Before doing anything:** read `.claude/CLAUDE.md`, `.claude/rules/markdown.md`, `.checks/boundaries.py`, `.checks/stop-hook.sh` and `.claude/settings.json`. Then settle the [open decisions](#4-open-decisions-ask-the-user-first) with the user.
 
@@ -53,7 +53,7 @@ C/             the original C program
 
 - **Run it:** `uv run --no-project python -m http.server 8000`, then open <http://localhost:8000>.
 - **Build:** there is no npm and no build step. The browser loads the vendored libraries as ES modules, through the import map in `index.html`.
-- **README.md** explains everything for the learner. It has a "Code walkthrough" that copies each file in full, folded per folder, and a "Singleton vs factory" section that ends with a "Factory vs class" comparison table. Read it to see how explanations are pitched.
+- **README.md** explains everything for the learner. It has a "Code walkthrough" that copies each file in full, folded per folder, and a "Singleton vs factory vs class" section that compares all three: a three-column table of the obvious differences, subtle differences, pros and cons for each, a "Factory vs class" table and "Which to use". Read it to see how explanations are pitched.
 - **History worth knowing:**
   - A version called `mixed/` (a singleton controller plus a factory model) existed from commit `236ef82` and was removed in `3e3c56e`, when the user chose fully self-contained versions.
   - Before `3e3c56e`, `view.js` and `model-controller-common.js` were shared at the root.
@@ -71,7 +71,7 @@ C/             the original C program
 | Browser globals (`window`, `document`, timers, `fetch`, `localStorage`, `addEventListener`, ...) only in `main.js` | Parts get what they need passed in (the key event, the container); the model stays pure and testable. |
 | The grid size (`WIDTH`, `HEIGHT`) is defined in the model and given to the view as `model.width` and `model.height` | The view imports nothing from the model; it draws whatever it is given. |
 | Each folder is self-contained (every relative import stays in its own folder), and `model-controller-common.js` holds only `Cmd` | The versions can be read, diffed and copied independently. The `Cmd` file mirrors the C split, where the `command` enum is the MODEL-CONTROLLER message. The user picked the file name. |
-| Three versions: singleton, factory, class | The comparison is the point of this repo. The README's advice: a singleton for things the world limits to one (the keyboard), and a factory or class for things you may want two of (models). |
+| Three versions: singleton, factory, class | The comparison is the point of this repo. The README's advice ("Which to use"): a singleton for things the world limits to one (the keyboard), and a factory for things you may want several of (models). A class does the same jobs as a factory; use it when there will be very many copies, since its methods are stored once, or when a library or browser feature expects one. |
 | Closures and classes both exist side by side; the template's choice is still open (decision 2 in §4) | Closures (`factory/`) have no `this` traps and need no special privacy syntax. Classes (`class/`) share methods on the prototype and match C++ `new`. They cost three things: the `this` trap (a method handed over alone loses its object, so `class/main.js` wraps the listener); `#` fields with their *brand check* (before touching `#pending`, the browser verifies that `this` really is a `Controller`, and throws if not); and `handleEvent` as an alternative to wrapping. The README covers all three. |
 | Key lookup uses `Object.hasOwn(KEYMAP, e.key)`, not `e.key in KEYMAP` | `in` also finds names every object inherits: `'toString' in KEYMAP` is `true`. `Object.hasOwn` checks only the table's own keys. All three controllers use it. |
 | Vendored libraries, an import map, no npm | No toolchain to learn. `node`/`npm` are not project dependencies (`CLAUDE.md`). |
@@ -88,7 +88,7 @@ C/             the original C program
   - `COPIES` requires `factory/model-controller-common.js` and `class/model-controller-common.js` to stay byte-identical to the singleton one.
   - `//` comments are stripped first, and an unknown `.js` file is itself a violation.
   - It is **a tripwire for honest mistakes, not a sandbox**: deliberately obfuscated code can get past it.
-  - **Known gap:** the file-level-state rule only matches top-level `let`/`var`/`const`. A `static` class field (for example `static count = 0;` inside a class body) belongs to the class itself, so every instance shares it. That makes it a singleton hidden inside the class, and the check does not flag it. This was confirmed by reading the rule's regex, `.checks/boundaries.py` line 39.
+  - **`static` fields:** a `static` class field (for example `static count = 0;` inside a class body) or `static { … }` block belongs to the class itself, so every instance shares it. That makes it a singleton hidden inside the class, and the check flags it outside `singleton/*` and `*/main.js`. Static methods (`static create() { … }`) hold no state and stay allowed. This rule was added after a live probe showed `static presses = 0;` in `class/controller.js` passing unflagged.
 - **Hooks in `.claude/settings.json`:**
   - `PostToolUse` (`Edit|Write|MultiEdit`) runs the check after every edit and gives the agent `file:line` feedback. It **cannot undo** the edit, and edits made with shell commands skip it.
   - `Stop` (`.checks/stop-hook.sh`) runs the check when the agent tries to end its turn, and on a violation sends it back to fix the code. After one failed round it lets the turn end but shows the user a warning, so a violation the agent cannot fix does not loop forever.
@@ -133,7 +133,12 @@ C/             the original C program
 All three styles exist in this repo as working references. Summary:
 
 - **Factory (recommended), like `factory/`.** Every part is created in `main.js` (`createModel()`, `createView(container)`, `createController()`), so a second model or view costs one line. No `this`, no special privacy syntax, and no file keeps state at file level.
-- **Class, like `class/`.** It's closest to C++ `new`, methods are shared on the prototype, and the syntax is familiar from libraries. The costs: the `this` wrapping in `main.js`, the `#` syntax, and one more rule the check doesn't have yet (no `static` mutable fields, §2.4 item 7). For the portfolio app (a few model instances, data held as plain records), the practical difference from a factory is small.
+- **Class, like `class/`.** It's closest to C++ `new`, and it has these pros (README → "Pros and cons"):
+  - methods are stored once on the prototype and shared, which matters at tens of thousands of copies, not at one;
+  - a `#` field used on the wrong object throws, instead of failing silently;
+  - some browser features are built around classes (a web component is a class that extends `HTMLElement`).
+
+  The costs: two more concepts than the factory (`this` and `new`); every method handed over on its own needs a wrapper in `main.js`; and one more thing to keep out (state in `static` fields, which the check already flags, §1.4). For the portfolio app (a few model instances, data held as plain records), the practical difference from a factory is small.
 - **Singleton, like `singleton/`.** One instance only. That's fine for a single-screen app, but it's the wrong default for a template.
 
 The skeleton lives at the root, with no version folders. Shown in the factory style; the class variant of each file is in brackets:
@@ -166,7 +171,7 @@ Claude Code loads `.claude/rules/*.md` files automatically when working on paths
 4. **Tests for the pure parts:** model updates and derived calculations. `CLAUDE.md` currently says `node`/`npm` are not used, so either a browser test page (`test.html` plus `*.test.js`, run in headless Chromium) or an explicit exception for Node in tests only. Ask the user (§4).
 5. **A committed test for the checker itself** (a replacement for the scratch matrix in §1.4), so changes to `boundaries.py` can't silently weaken it.
 6. **The pitfalls from §1.5** written into `rules/mvc.md`: replace arrays rather than mutating them, `batch`, money stored as integer cents, `Object.hasOwn` for table lookups, and, for classes, wrapping methods handed to the browser.
-7. **Only if the template uses classes:** a check rule against mutable `static` class fields (the gap in §1.4). A `static` field is class-level shared state, so it belongs to the same "no file-level state" rule.
+7. **Keep the `static`-field rule** (§1.4) in the template's check. It matters only if the style is class, but it costs nothing otherwise. A `static` field is class-level shared state, so it belongs with the "no file-level state" rule.
 
 ### 2.5 Packaging
 
@@ -202,11 +207,11 @@ The user plans a portfolio object: each portfolio has many holdings, and each ho
 - **Money as integers:** in JavaScript, `0.10 + 0.20` is `0.30000000000000004`, but `10 + 20` cents is exactly `30`. Integers are exact up to 2⁵³ (about 9 × 10¹⁵ cents). This is fixed-point arithmetic, like Q-format in DSP: pick a scale per field (cents, or 1/10,000 of a dollar for finer prices). Division and averages need explicit rounding.
 - **The cost-basis rule must be decided early:** FIFO (sell the oldest shares first) or average cost. It changes realized gains and depends on the user's tax rules, so it is a requirement to ask about, not a coding detail.
 - **Where the class trade-offs are written up:**
-  - README → "Singleton vs factory" → "Factory vs class" (the comparison table);
+  - README → "Singleton vs factory vs class": the three-column table, "Pros and cons" (with a Class block), "Factory vs class" and "Which to use";
   - the `class/` walkthrough (the `this` trap, the brand check, and the `handleEvent` footnote);
   - the Terms entries for `class` and `#`.
 
-  Classes pay off most at about 10⁵ or more instances that each carry methods (a simulation, a game with many entities), or when extending a library built on classes.
+  In the README's words, a class pays off when there will be very many copies (tens of thousands, not one), since its methods are stored once, or when a library or browser feature expects one, such as a web component extending `HTMLElement`.
 
 ## 4. Open decisions (ask the user first)
 
@@ -224,8 +229,7 @@ The user plans a portfolio object: each portfolio has many holdings, and each ho
 3. Rewrite `.checks/boundaries.py` for root-level files:
    - `ALLOWED_IMPORTS` keyed by plain file names (`model.js`, `view.js`, ...);
    - remove `COPIES` and the `{dir}` folder rules;
-   - keep `RULES` and `REDRAW` as they are, adjusting the allowed globs to root-level names (for example `main.js` instead of `*/main.js`);
-   - if the style is class, add the `static`-field rule (§2.4 item 7).
+   - keep `RULES` (including the `static`-field rule, §2.4 item 7) and `REDRAW` as they are, adjusting the allowed globs to root-level names (for example `main.js` instead of `*/main.js`).
 
    Then add the committed checker test (§2.4 item 5).
 4. Copy `.claude/settings.json` (hooks and allowlist) and `.checks/stop-hook.sh`. Write `.claude/rules/mvc.md` (§2.1 rules plus the §2.4 additions) and a short `CLAUDE.md`.

@@ -39,6 +39,10 @@ RULES = [
     (r"^(?:export\s+)?(?:let|var)\b|^(?:export\s+)?const\s+[\w$]+\s*=\s*(?:\[|\{|new\b)",
      {"*/main.js", "singleton/*"},
      "file-level changing state only in singleton/ (factory/ and class/ keep it per instance)"),
+    # a static field or static block: class-level data that every instance shares (a singleton
+    # inside the class). Static methods hold no state, so `static name(...)` stays allowed.
+    (r"(?:^\s*|[{;]\s*)static\s+(?:#?[\w$]+\s*(?:=|;)|\{)", {"*/main.js", "singleton/*"},
+     "static fields (state shared by every instance) only in singleton/ (factory/ and class/ keep it per instance)"),
     (r"\b(?:viewUpdate|createView|View)\b", {"*/view.js", "*/main.js"}, "only main.js uses the view"),
 ]
 
