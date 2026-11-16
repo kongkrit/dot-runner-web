@@ -1,6 +1,6 @@
 ---
 paths:
-  - "**/README.md"
+  - "HOW_AND_WALKTHROUGH.md"
   - "docs/**/*.md"
 ---
 # Markdown documents

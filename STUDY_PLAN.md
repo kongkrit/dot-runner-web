@@ -1,12 +1,12 @@
 # Study plan
 
-The goal: by the end you can build a small Preact Signals + lit-html app on your own. Each step has two parts: **read** the listed sections of the [README](README.md), in order, then **build** something small and see it run. The steps go: a hello world from a blank folder, then one small feature added to the singleton, factory and class versions in turn, then an app of your own. The code comments name the C counterpart of each piece, if that helps.
+The goal: by the end you can build a small Preact Signals + lit-html app on your own. Each step has two parts: **read** the listed sections, in order (most are in [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md)), then **build** something small and see it run. The steps go: a hello world from a blank folder, then one small feature added to the singleton, factory and class versions in turn, then an app of your own. The code comments name the C counterpart of each piece, if that helps.
 
 ## Can I skip the factory?
 
 You can, but it costs more than it saves:
 
-- The class walkthrough in the README explains only what differs from `factory/`.
+- The `class/` walkthrough explains only what differs from `factory/`.
 - The factory step is small: `git diff --no-index -w singleton factory` is 21 lines added and 10 removed.
 - Skipping it means meeting the closure, `new`, `this` and `#` all in one step instead of two.
 
@@ -15,8 +15,8 @@ You can, but it costs more than it saves:
 **Read:**
 
 1. The README introduction and [Run](README.md#run): how the page is served, and why it needs a server.
-2. [Terms](README.md#terms): *DOM*, *import map*, *signal*, *effect*, *html*, *container*, *render*. Skip the rest for now.
-3. [Code walkthrough → `index.html`](README.md#indexhtml): the import map and module scripts. The hello world's `index.html` below is a trimmed copy.
+2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *import map*, *signal*, *effect*, *html*, *container*, *render*. Skip the rest for now.
+3. [Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml): the import map and module scripts. The hello world's `index.html` below is a trimmed copy.
 
 **Build:** outside the repo, so nothing here is checked against the repo's rules. From the repo root:
 
@@ -76,10 +76,10 @@ The same four blocks, split into the repo's five files. Run the repo (`uv run --
 
 **Read:**
 
-1. [Files](README.md#files): what each of the five files is for.
-2. [Terms](README.md#terms): *singleton*, *computed*, *Object.freeze*.
-3. [One tick, step by step](README.md#one-tick-step-by-step): what happens between a key press and the redraw.
-4. [Code walkthrough → `singleton/`](README.md#singleton), all five files in the README's order:
+1. [Files](HOW_AND_WALKTHROUGH.md#files): what each of the five files is for.
+2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *singleton*, *computed*, *Object.freeze*.
+3. [One tick, step by step](HOW_AND_WALKTHROUGH.md#one-tick-step-by-step): what happens between a key press and the redraw.
+4. [Code walkthrough → `singleton/`](HOW_AND_WALKTHROUGH.md#singleton), all five files in the walkthrough's order:
    - `model-controller-common.js`: the `Cmd` table;
    - `view.js`: tagged templates and slots, the heart of lit-html;
    - `model.js`: `signal`, `computed` and the one rule that changes state;
@@ -132,10 +132,10 @@ Then run `uv run --no-project python .checks/boundaries.py`. It checks the repo'
 
 **Read:**
 
-1. [Terms](README.md#terms): *factory*, *closure*.
+1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *factory*, *closure*.
 2. `git diff --no-index -w singleton factory` in a terminal. `-w` hides the re-indentation, so only the real changes show.
-3. [Code walkthrough → `factory/`](README.md#factory), all five files. Each one explains only what changed from the singleton.
-4. [Singleton vs factory vs class](README.md#singleton-vs-factory-vs-class): its introduction, [Obvious differences](README.md#obvious-differences), [Subtle differences](README.md#subtle-differences) items 1–5, and the singleton and factory halves of [Pros and cons](README.md#pros-and-cons).
+3. [Code walkthrough → `factory/`](HOW_AND_WALKTHROUGH.md#factory), all five files. Each one explains only what changed from the singleton.
+4. [Singleton vs factory vs class](HOW_AND_WALKTHROUGH.md#singleton-vs-factory-vs-class): its introduction, [Obvious differences](HOW_AND_WALKTHROUGH.md#obvious-differences), [Subtle differences](HOW_AND_WALKTHROUGH.md#subtle-differences) items 1–5, and the singleton and factory halves of [Pros and cons](HOW_AND_WALKTHROUGH.md#pros-and-cons).
 
 The whole pattern is three moves: wrap the file-level state in a function, `return` the object, and have `main.js` call the function. The returned functions keep using the locals of the call that made them; that is the closure.
 
@@ -188,7 +188,7 @@ effect(() => view.update(model));            // redraw only on change
 effect(() => view2.update(model2));
 ```
 
-Why read once: `read()` empties the latch, so a second `controller.read()` in the same tick returns `Cmd.NONE`, and `model2` would never get a command and never move. Giving each copy its own start is what the README calls settings per copy (Subtle differences, item 3).
+Why read once: `read()` empties the latch, so a second `controller.read()` in the same tick returns `Cmd.NONE`, and `model2` would never get a command and never move. Giving each copy its own start is what the walkthrough calls settings per copy (Subtle differences, item 3).
 
 </details>
 
@@ -196,10 +196,10 @@ Why read once: `read()` empties the latch, so a second `controller.read()` in th
 
 **Read:**
 
-1. [Terms](README.md#terms): *class*, *# (private member)*.
+1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *class*, *# (private member)*.
 2. `git diff --no-index -w factory class`.
-3. [Code walkthrough → `class/`](README.md#class), all five files. Take your time on `main.js`: the `this` trap, the brand check, and the `handleEvent` footnote.
-4. [Subtle differences](README.md#subtle-differences) items 6–7, [Factory vs class](README.md#factory-vs-class), and the class half of [Pros and cons](README.md#pros-and-cons).
+3. [Code walkthrough → `class/`](HOW_AND_WALKTHROUGH.md#class), all five files. Take your time on `main.js`: the `this` trap, the brand check, and the `handleEvent` footnote.
+4. [Subtle differences](HOW_AND_WALKTHROUGH.md#subtle-differences) items 6–7, [Factory vs class](HOW_AND_WALKTHROUGH.md#factory-vs-class), and the class half of [Pros and cons](HOW_AND_WALKTHROUGH.md#pros-and-cons).
 
 The pattern: `class Model { … }` is the blueprint, `new Model()` makes a copy, `#name` fields hold each copy's private state, and inside a method `this` is the copy it was called on (`model.update(c)` → `this` is `model`).
 
@@ -234,10 +234,10 @@ Optional: build the two dots here too. You'll need a `constructor(startRow, star
 
 **Read:**
 
-1. [Which to use](README.md#which-to-use): which pattern fits which part.
+1. [Which to use](HOW_AND_WALKTHROUGH.md#which-to-use): which pattern fits which part.
 2. The Architecture rules in [.claude/CLAUDE.md](.claude/CLAUDE.md): the repo's MVC rules, which become your checklist.
 
-**Build:** back in `~/hello-signals`, build something of your own and split it into `model.js`, `view.js`, `controller.js` and `main.js` the way the repo does. Use the factory style, the README's default for parts you may want several of. Ideas: a traffic light that cycles on a timer, or a counter driven by `+` and `-` keys. `.checks/boundaries.py` checks only this repo's folders, not `~/hello-signals`, so you check the rules by hand.
+**Build:** back in `~/hello-signals`, build something of your own and split it into `model.js`, `view.js`, `controller.js` and `main.js` the way the repo does. Use the factory style, the walkthrough's default for parts you may want several of. Ideas: a traffic light that cycles on a timer, or a counter driven by `+` and `-` keys. `.checks/boundaries.py` checks only this repo's folders, not `~/hello-signals`, so you check the rules by hand.
 
 ## Cleaning up
 

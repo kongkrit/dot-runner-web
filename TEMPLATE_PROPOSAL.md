@@ -1,6 +1,6 @@
 # Proposal: extract a reusable MVC template (Preact Signals + lit-html)
 
-**Status:** proposal, nothing built yet. Written 2026-11-16. Describes the code as of commit `d3af8f6` of this repo (`dot-runner-web`), and the README as of its "Singleton vs factory vs class" revision.
+**Status:** proposal, nothing built yet. Written 2026-11-16. Describes the code as of commit `d3af8f6` of this repo (`dot-runner-web`), and `HOW_AND_WALKTHROUGH.md` (then part of the README) as of its "Singleton vs factory vs class" revision.
 **Audience:** a fresh Claude Code session with no memory of the conversation that produced this repo. Everything you need is here or in the files it names. Where this document and `.claude/CLAUDE.md` ever disagree, `CLAUDE.md` is the source of truth for the current code.
 **Before doing anything:** read `.claude/CLAUDE.md`, `.claude/rules/markdown.md`, `.checks/boundaries.py`, `.checks/stop-hook.sh` and `.claude/settings.json`. Then settle the [open decisions](#4-open-decisions-ask-the-user-first) with the user.
 
@@ -53,7 +53,7 @@ C/             the original C program
 
 - **Run it:** `uv run --no-project python -m http.server 8000`, then open <http://localhost:8000>.
 - **Build:** there is no npm and no build step. The browser loads the vendored libraries as ES modules, through the import map in `index.html`.
-- **README.md** explains everything for the learner. It has a "Code walkthrough" that copies each file in full, folded per folder, and a "Singleton vs factory vs class" section that compares all three: a three-column table of the obvious differences, subtle differences, pros and cons for each, a "Factory vs class" table and "Which to use". Read it to see how explanations are pitched.
+- **README.md** is a short front page: what the app is, how to run it, links to the other docs. **HOW_AND_WALKTHROUGH.md** explains everything for the learner. It has a "Code walkthrough" that copies each file in full, folded per folder, and a "Singleton vs factory vs class" section that compares all three: a three-column table of the obvious differences, subtle differences, pros and cons for each, a "Factory vs class" table and "Which to use". Read it to see how explanations are pitched.
 - **History worth knowing:**
   - A version called `mixed/` (a singleton controller plus a factory model) existed from commit `236ef82` and was removed in `3e3c56e`, when the user chose fully self-contained versions.
   - Before `3e3c56e`, `view.js` and `model-controller-common.js` were shared at the root.
@@ -71,8 +71,8 @@ C/             the original C program
 | Browser globals (`window`, `document`, timers, `fetch`, `localStorage`, `addEventListener`, ...) only in `main.js` | Parts get what they need passed in (the key event, the container); the model stays pure and testable. |
 | The grid size (`WIDTH`, `HEIGHT`) is defined in the model and given to the view as `model.width` and `model.height` | The view imports nothing from the model; it draws whatever it is given. |
 | Each folder is self-contained (every relative import stays in its own folder), and `model-controller-common.js` holds only `Cmd` | The versions can be read, diffed and copied independently. The `Cmd` file mirrors the C split, where the `command` enum is the MODEL-CONTROLLER message. The user picked the file name. |
-| Three versions: singleton, factory, class | The comparison is the point of this repo. The README's advice ("Which to use"): a singleton for things the world limits to one (the keyboard), and a factory for things you may want several of (models). A class does the same jobs as a factory; use it when there will be very many copies, since its methods are stored once, or when a library or browser feature expects one. |
-| Closures and classes both exist side by side; the template's choice is still open (decision 2 in §4) | Closures (`factory/`) have no `this` traps and need no special privacy syntax. Classes (`class/`) share methods on the prototype and match C++ `new`. They cost three things: the `this` trap (a method handed over alone loses its object, so `class/main.js` wraps the listener); `#` fields with their *brand check* (before touching `#pending`, the browser verifies that `this` really is a `Controller`, and throws if not); and `handleEvent` as an alternative to wrapping. The README covers all three. |
+| Three versions: singleton, factory, class | The comparison is the point of this repo. The advice in HOW_AND_WALKTHROUGH.md ("Which to use"): a singleton for things the world limits to one (the keyboard), and a factory for things you may want several of (models). A class does the same jobs as a factory; use it when there will be very many copies, since its methods are stored once, or when a library or browser feature expects one. |
+| Closures and classes both exist side by side; the template's choice is still open (decision 2 in §4) | Closures (`factory/`) have no `this` traps and need no special privacy syntax. Classes (`class/`) share methods on the prototype and match C++ `new`. They cost three things: the `this` trap (a method handed over alone loses its object, so `class/main.js` wraps the listener); `#` fields with their *brand check* (before touching `#pending`, the browser verifies that `this` really is a `Controller`, and throws if not); and `handleEvent` as an alternative to wrapping. `HOW_AND_WALKTHROUGH.md` covers all three. |
 | Key lookup uses `Object.hasOwn(KEYMAP, e.key)`, not `e.key in KEYMAP` | `in` also finds names every object inherits: `'toString' in KEYMAP` is `true`. `Object.hasOwn` checks only the table's own keys. All three controllers use it. |
 | Vendored libraries, an import map, no npm | No toolchain to learn. `node`/`npm` are not project dependencies (`CLAUDE.md`). |
 
@@ -125,7 +125,7 @@ C/             the original C program
 ### 2.2 What stays in dot-runner (not in the template)
 
 - The three versions, their deliberate duplication and the `COPIES` rule. The template has one version.
-- The README walkthrough rule ("copies each source file in full"). It is great for learning but too much upkeep for a real app.
+- The walkthrough rule (HOW_AND_WALKTHROUGH.md "copies each source file in full"). It is great for learning but too much upkeep for a real app.
 - Dot-app and C details: `KEYPAD`, the NMI tick, 16×8, `Cmd` as a bare enum.
 
 ### 2.3 Skeleton style (decision 2 in §4): factory recommended, class a close second
@@ -133,7 +133,7 @@ C/             the original C program
 All three styles exist in this repo as working references. Summary:
 
 - **Factory (recommended), like `factory/`.** Every part is created in `main.js` (`createModel()`, `createView(container)`, `createController()`), so a second model or view costs one line. No `this`, no special privacy syntax, and no file keeps state at file level.
-- **Class, like `class/`.** It's closest to C++ `new`, and it has these pros (README → "Pros and cons"):
+- **Class, like `class/`.** It's closest to C++ `new`, and it has these pros (HOW_AND_WALKTHROUGH.md → "Pros and cons"):
   - methods are stored once on the prototype and shared, which matters at tens of thousands of copies, not at one;
   - a `#` field used on the wrong object throws, instead of failing silently;
   - some browser features are built around classes (a web component is a class that extends `HTMLElement`).
@@ -161,7 +161,7 @@ vendor/                lit-html 3.3.3, @preact/signals-core 1.14.5 (copy from th
 README.md              how to run, the architecture in brief, how the checks work
 ```
 
-Claude Code loads `.claude/rules/*.md` files automatically when working on paths matching their `paths:` front matter, just as `markdown.md` is loaded for READMEs here.
+Claude Code loads `.claude/rules/*.md` files automatically when working on paths matching their `paths:` front matter, just as `markdown.md` is loaded for `HOW_AND_WALKTHROUGH.md` here.
 
 ### 2.4 What the template must add (the dot app never needed it)
 
@@ -207,11 +207,11 @@ The user plans a portfolio object: each portfolio has many holdings, and each ho
 - **Money as integers:** in JavaScript, `0.10 + 0.20` is `0.30000000000000004`, but `10 + 20` cents is exactly `30`. Integers are exact up to 2⁵³ (about 9 × 10¹⁵ cents). This is fixed-point arithmetic, like Q-format in DSP: pick a scale per field (cents, or 1/10,000 of a dollar for finer prices). Division and averages need explicit rounding.
 - **The cost-basis rule must be decided early:** FIFO (sell the oldest shares first) or average cost. It changes realized gains and depends on the user's tax rules, so it is a requirement to ask about, not a coding detail.
 - **Where the class trade-offs are written up:**
-  - README → "Singleton vs factory vs class": the three-column table, "Pros and cons" (with a Class block), "Factory vs class" and "Which to use";
+  - HOW_AND_WALKTHROUGH.md → "Singleton vs factory vs class": the three-column table, "Pros and cons" (with a Class block), "Factory vs class" and "Which to use";
   - the `class/` walkthrough (the `this` trap, the brand check, and the `handleEvent` footnote);
   - the Terms entries for `class` and `#`.
 
-  In the README's words, a class pays off when there will be very many copies (tens of thousands, not one), since its methods are stored once, or when a library or browser feature expects one, such as a web component extending `HTMLElement`.
+  In HOW_AND_WALKTHROUGH.md's words, a class pays off when there will be very many copies (tens of thousands, not one), since its methods are stored once, or when a library or browser feature expects one, such as a web component extending `HTMLElement`.
 
 ## 4. Open decisions (ask the user first)
 

@@ -46,7 +46,7 @@ RULES = [
     (r"\b(?:viewUpdate|createView|View)\b", {"*/view.js", "*/main.js"}, "only main.js uses the view"),
 ]
 
-# Deliberate copies that must stay byte-identical (the README walkthrough only points to the original).
+# Deliberate copies that must stay byte-identical (the walkthrough in HOW_AND_WALKTHROUGH.md only points to the original).
 COPIES = {"factory/model-controller-common.js": "singleton/model-controller-common.js",
           "class/model-controller-common.js": "singleton/model-controller-common.js"}
 

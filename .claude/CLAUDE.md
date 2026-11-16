@@ -68,10 +68,11 @@ The app is split like the C original in `C/`: model, view, controller, and a mai
 - `.checks/` — `boundaries.py` checks the Architecture rules; `stop-hook.sh` runs it as the `Stop` hook.
 - `.claude/settings.json` — committed settings, permission allowlist and hooks (`SessionStart` prints `.claude/PROGRESS.md`; `PostToolUse` and `Stop` run the check). Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
 - `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md`, the latest session handoff (older ones are in its git history), then commits.
-- `.claude/rules/markdown.md` — folding rules for README.md and docs/, loaded automatically for those files.
+- `.claude/rules/markdown.md` — folding rules for HOW_AND_WALKTHROUGH.md and docs/, loaded automatically for those files.
 - `.gitignore`, `.gitattributes` — ignore rules; LF line endings.
-- `README.md` — human-facing overview. Its Code walkthrough copies each source file in full, so update it in the same change as the file; the two `model-controller-common.js` copies only point to the singleton one.
-- `STUDY_PLAN.md` — the learner's read-then-build path. It quotes the source and links README headings, so update it in the same change when either moves.
+- `README.md` — front page: what this is, how to run it, links to the other docs; short and unfolded.
+- `HOW_AND_WALKTHROUGH.md` — how it works, the code walkthrough, the three patterns compared, the Claude Code and Debian setup. The walkthrough copies each source file in full, so update it in the same change as the file; the two `model-controller-common.js` copies only point to the singleton one.
+- `STUDY_PLAN.md` — the learner's read-then-build path. It quotes the source and links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when either moves.
 - `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo; read it before working on that.
 
 ## Conventions
@@ -85,8 +86,8 @@ The app is split like the C original in `C/`: model, view, controller, and a mai
 
 ## Development environment
 
-- **Debian 13 (trixie)** with `docker` installed. Base tooling via `apt`: `git`, `gh`, `python3`, `python3-dev`, `build-essential`, `curl`, `jq`, `wget`, `time`; plus `uv` from its standalone installer into `~/.local/bin` (commands in the [README](../README.md#development-setup-debian-13)).
-- **Install missing tools yourself:** `sudo apt install -y <package>` (`sudo apt update` first if not found). Use `apt` for system tools only. If the project will keep relying on a new tool, add it to the README's install command.
+- **Debian 13 (trixie)** with `docker` installed. Base tooling via `apt`: `git`, `gh`, `python3`, `python3-dev`, `build-essential`, `curl`, `jq`, `wget`, `time`; plus `uv` from its standalone installer into `~/.local/bin` (commands in [HOW_AND_WALKTHROUGH.md](../HOW_AND_WALKTHROUGH.md#development-setup-debian-13)).
+- **Install missing tools yourself:** `sudo apt install -y <package>` (`sudo apt update` first if not found). Use `apt` for system tools only. If the project will keep relying on a new tool, add it to the install command in HOW_AND_WALKTHROUGH.md.
 - **Python: use `uv` only.** Never run `pip`, `pip3`, `python3 -m pip`, `python3 -m venv`, or `pipx`; `uv pip …` is uv's own subcommand and is fine. uv handles both venvs and installs, and Debian 13 blocks system-wide `pip install` anyway (PEP 668). One venv per project:
 
   ```bash
@@ -94,4 +95,4 @@ The app is split like the C original in `C/`: model, view, controller, and a mai
   uv venv && uv pip install -r requirements.txt    # requirements.txt-only project
   uv run <cmd>                                     # run a command in the project venv
   ```
-- `node`/`npm` and .NET are not used; serve the page with the Run command above. Multi-arch Docker builds need a one-time QEMU + buildx setup (see README).
+- `node`/`npm` and .NET are not used; serve the page with the Run command above. Multi-arch Docker builds need a one-time QEMU + buildx setup (see HOW_AND_WALKTHROUGH.md).
