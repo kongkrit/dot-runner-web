@@ -4,29 +4,7 @@ Guidance for Claude Code in this repository.
 
 ## What this is
 
-A small browser app for **learning Preact Signals and lit-html**: a dot moving on a 16×8 grid, built three times on one page (singleton, factory and class), each in its own self-contained folder, so the patterns can be compared. Plain ES modules with no npm and no build step; the two libraries are vendored in `vendor/` and loaded through an import map in `index.html`.
-
-## Code principles
-
-Code is simple, minimal, easy to understand, and DRY. These come before cleverness, speculative flexibility, and personal style.
-
-- **Simple:** use the most straightforward approach that works. No clever tricks, premature abstraction, or premature optimization.
-- **Minimal:** write only what the task needs. No speculative features, unused options, or "just in case" code. Fewer lines, files, and dependencies win. Delete dead code.
-- **Easy to understand:** a newcomer should follow it on first read. Clear names, small functions, shallow nesting, obvious control flow.
-- **DRY:** one source of truth for each piece of logic, data, and config. Search for existing code to reuse before writing new code; never copy-paste logic. Extract it once instead.
-- **When in doubt, choose the simpler option.** Before finishing, re-read your diff and cut anything that isn't needed.
-
-## Architecture rules
-
-The app is split like the bare-metal C original in `C/`: model, view, controller, and a main that wires them. It exists in three versions, each in its own folder with the same five files and nothing shared but `vendor/`: `singleton/` (each part exists once, its state in file-level variables), `factory/` (`main.js` creates the parts with `createModel()`, `createView()` and `createController()`) and `class/` (`main.js` creates the parts with `new Model()`, `new View(container)` and `new Controller()`; their state sits in `#` private fields). Each folder has its own `model-controller-common.js` (`Cmd`, the model–controller message, like the C `command` enum), `model.js`, `view.js`, `controller.js` and `main.js`. The grid size (`WIDTH`, `HEIGHT`) belongs to the model: each `model.js` defines it, repeated on purpose, and hands it to the view as `model.width` and `model.height`. The rules below apply per file name in all three folders. They are checked by `.checks/boundaries.py`, which a `PostToolUse` hook runs after every edit and a `Stop` hook runs before a turn may end (shell edits skip the first, not the second); run it by hand with `uv run --no-project python .checks/boundaries.py`.
-
-- **Roles:** `model.js` holds the state and the only rule that changes it, `update(cmd)`. `view.js` draws the state once per call (`viewUpdate` in `singleton/`; `view.update` on a view made by `createView(container)` in `factory/` or `new View(container)` in `class/`). `controller.js` turns key presses into commands. `main.js` connects the parts to the browser and decides when things run: the key listener, the tick, and the redraw `effect`.
-- **Imports go one way:** `model-controller-common.js` imports nothing and holds only `Cmd`; `view.js` → `lit-html` only; `model.js` → `@preact/signals-core`, `model-controller-common.js`; `controller.js` → `model-controller-common.js`; `main.js` → `@preact/signals-core`, `view.js`, `model.js`, `controller.js`. Every relative import stays inside the importing file's own folder, so the versions never import each other. Nothing imports a `main.js`.
-- **Browser globals** (`window`, `document`, `navigator`, `location`, `history`, `localStorage`, `sessionStorage`, `fetch`, `alert`, `setTimeout`, `setInterval`, `requestAnimationFrame`, `queueMicrotask`, `addEventListener`, `globalThis`, `self`) appear only in `main.js`. Other parts get what they need passed in: the key event, the container element.
-- **State changes only through `model.update(cmd)`:** only `model.js` writes `.value` (with `=`, `+=` and the like, or `++`/`--`); only `main.js` uses `.update` and creates `effect`s; the redraw (`viewUpdate(...)` or `view.update(...)`) is called only inside an `effect(...)` in `main.js`, on one line, so the screen never goes stale.
-- **File-level state:** allowed only in `singleton/` (that is the pattern). Factory and class parts (`factory/`, `class/`) keep no changing state at file level (no top-level `let` or `var`, no top-level `const` holding an array, object or `new` instance, and no `static` class fields or blocks, which every instance would share; static methods are fine; constant tables are wrapped in `Object.freeze`) and `main.js` creates the instances.
-- **Deliberate duplication:** the update rule, the key table and the view template appear once per version on purpose, so the patterns can be read side by side. `factory/model-controller-common.js` and `class/model-controller-common.js` are copies of `singleton/model-controller-common.js`. This is a stated exception to DRY; keep all copies in step. The `model-controller-common.js` copies must stay byte-identical, and `.checks/boundaries.py` fails if they differ.
-- **New `.js` file:** add it to `ALLOWED_IMPORTS` in `.checks/boundaries.py` (and to these rules) before using it; the check rejects files it doesn't know.
+A repo for **learning MVC (model, view, controller) front-end programming with Preact Signals and lit-html**. Its app is a dot moving on a 16×8 grid, built three times on one page (singleton, factory and class), each in its own self-contained folder, so the patterns can be compared. Plain ES modules with no npm and no build step; the two libraries are vendored in `vendor/` and loaded through an import map in `index.html`.
 
 ## How to explain things
 
@@ -52,22 +30,49 @@ Goal: as simple as possible, without saying anything false.
 8. No handwaving: back each claim with a reason, a number, or a source. If the answer depends on something, say what. If unsure, say so.
 9. Before sending, check: could I follow this on the first read without looking anything up? If not, rewrite it.
 
+## Learning style
+
+The user finds the hard part of learning any new tech to be getting a "hello world" working and learning the syntax and patterns to build one small "house". Scaling from there to a "city" is easy for them. So when teaching or planning study (as in `STUDY_PLAN.md`):
+
+- Give each step two parts: first the sections to read and absorb, in order; then a small runnable build, hint first and solution folded.
+- Spend the detail on getting the first small thing working. Don't spend effort on scaling up; the user does that on their own.
+- Mention a C parallel only in passing, where it helps. Don't map everything to `C/`.
+
+## Code principles
+
+Code is simple, minimal, easy to understand, and DRY. These come before cleverness, speculative flexibility, and personal style.
+
+- **Simple:** use the most straightforward approach that works. No clever tricks, premature abstraction, or premature optimization.
+- **Minimal:** write only what the task needs. No speculative features, unused options, or "just in case" code. Fewer lines, files, and dependencies win. Delete dead code.
+- **Easy to understand:** a newcomer should follow it on first read. Clear names, small functions, shallow nesting, obvious control flow.
+- **DRY:** one source of truth for each piece of logic, data, and config. Search for existing code to reuse before writing new code; never copy-paste logic. Extract it once instead.
+- **When in doubt, choose the simpler option.** Before finishing, re-read your diff and cut anything that isn't needed.
+
+## Architecture rules
+
+The app is split like the C original in `C/`: model, view, controller, and a main that wires them. It exists three times: `singleton/` (each part exists once, its state at file level), `factory/` (`main.js` calls `createModel()`, `createView(container)` and `createController()`) and `class/` (`main.js` uses `new Model()`, `new View(container)` and `new Controller()`; state in `#` private fields). Each folder holds the same five files and shares nothing but `vendor/`: `model-controller-common.js` (only `Cmd`, the model–controller message, like the C `command` enum), `model.js`, `view.js`, `controller.js`, `main.js`. The rules apply per file name in every folder. `.checks/boundaries.py` checks them after every edit (`PostToolUse` hook; shell edits skip it) and before a turn ends (`Stop` hook); run it by hand with `uv run --no-project python .checks/boundaries.py`.
+
+- **Roles:** `model.js` holds the state, the only rule that changes it (`update(cmd)`), and the grid size (`WIDTH`, `HEIGHT`), which the view reads as `model.width` and `model.height`. `view.js` draws the state once per call. `controller.js` turns key presses into commands. `main.js` connects the parts to the browser and decides when things run: the key listener, the tick, the redraw `effect`.
+- **Imports go one way:** `model-controller-common.js` → nothing; `view.js` → `lit-html`; `model.js` → `@preact/signals-core`, `model-controller-common.js`; `controller.js` → `model-controller-common.js`; `main.js` → `@preact/signals-core`, `view.js`, `model.js`, `controller.js`. Relative imports stay in their own folder, and nothing imports a `main.js`.
+- **Browser globals** (`window`, `document`, `fetch`, `localStorage`, timers such as `setInterval`, `addEventListener`, …; the full list is in `.checks/boundaries.py`) appear only in `main.js`. Other parts get what they need passed in: the key event, the container element.
+- **State changes only through `model.update(cmd)`:** only `model.js` writes `.value` (`=`, `+=`, `++` and the like); only `main.js` calls `.update` and creates `effect`s; the redraw (`viewUpdate(...)` or `view.update(...)`) runs only inside an `effect(...)` on the same line, so the screen never goes stale.
+- **File-level state only in `singleton/`:** in `factory/` and `class/`, no top-level `let` or `var`, no top-level `const` holding an array, object or `new` instance (constant tables use `Object.freeze`), and no `static` class fields or blocks (static methods are fine). `main.js` creates the instances.
+- **Deliberate duplication** (a stated exception to DRY): the grid size, update rule, key table and view template appear once per version so the patterns read side by side; keep them in step. `factory/` and `class/` hold byte-identical copies of `singleton/model-controller-common.js`, and the check fails if they differ.
+- **New `.js` file:** add it to `ALLOWED_IMPORTS` in `.checks/boundaries.py`, and to these rules, before using it; the check rejects unknown files.
+
 ## Layout
 
-- `index.html` — page shell: import map, grid CSS, the `#app-singleton`, `#app-factory` and `#app-class` containers, one module script per version.
-- `singleton/` — `model-controller-common.js` (`Cmd`, shared by model and controller), `model.js` (state as file-level signals, exports `model`), `view.js` (lit-html template and `viewUpdate(m, container)`, grid size read from the model), `controller.js` (key table and file-level latch, exports `controller`), `main.js` (wiring into `#app-singleton`).
-- `factory/` — `model-controller-common.js` (copy of the singleton one), `model.js` (`createModel()`), `view.js` (`createView(container)`, the same template), `controller.js` (`createController()`), `main.js` (creates one of each, wiring into `#app-factory`).
-- `class/` — `model-controller-common.js` (copy of the singleton one), `model.js` (`class Model`), `view.js` (`class View`, the same template), `controller.js` (`class Controller`), `main.js` (creates one of each with `new`, wiring into `#app-class`; wraps `keydown` so it keeps `this`).
-- `.checks/boundaries.py` — checks the Architecture rules above (stdlib Python); run by the `PostToolUse` hook. `.checks/stop-hook.sh` — the `Stop` hook: runs the same check and refuses to let a turn end while it fails.
+- `index.html` — page shell: import map, grid CSS, one container and one module script per version.
+- `singleton/`, `factory/`, `class/` — the three versions, five files each (see Architecture rules).
 - `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is.
-- `.claude/settings.json` — committed settings (`model: opus`, `effortLevel: xhigh`), permission allowlist, a `SessionStart` hook that prints `.claude/PROGRESS.md` into context, a `PostToolUse` hook that runs `.checks/boundaries.py` after every edit (feedback; it cannot undo the edit), and a `Stop` hook (`.checks/stop-hook.sh`) that keeps Claude working until that check passes. Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
-- `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one (base: the last commit that touched it), then commits.
-- `.claude/rules/markdown.md` — how to write README.md and docs/: which `##` sections fold, and how. Claude Code loads it by itself when working on those files.
-- `.claude/PROGRESS.md` — latest session handoff only, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`.
-- `.gitignore`, `.gitattributes` — ignore rules; LF line endings and binary file types.
-- `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo, with the full context a new session needs; read it before working on that.
-- `STUDY_PLAN.md` — the learner's path. Each step lists README sections to read, then a small build: a hello world in a blank folder, a step counter added to each version (plus two dots in `factory/`), then an app of their own. Its exercises quote the source and its reading lists link README headings, so update it in the same change when either moves.
-- `README.md` — human-facing overview. Its Code walkthrough copies each source file in full, so update it in the same change as the file. The exceptions are `factory/model-controller-common.js` and `class/model-controller-common.js`: identical copies whose sections only point to `singleton/model-controller-common.js`.
+- `.checks/` — `boundaries.py` checks the Architecture rules; `stop-hook.sh` runs it as the `Stop` hook.
+- `.claude/settings.json` — committed settings, permission allowlist and hooks (`SessionStart` prints `.claude/PROGRESS.md`; `PostToolUse` and `Stop` run the check). Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
+- `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md`, the latest session handoff (older ones are in its git history), then commits.
+- `.claude/rules/markdown.md` — folding rules for README.md and docs/, loaded automatically for those files.
+- `.gitignore`, `.gitattributes` — ignore rules; LF line endings.
+- `README.md` — human-facing overview. Its Code walkthrough copies each source file in full, so update it in the same change as the file; the two `model-controller-common.js` copies only point to the singleton one.
+- `STUDY_PLAN.md` — the learner's read-then-build path. It quotes the source and links README headings, so update it in the same change when either moves.
+- `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo; read it before working on that.
 
 ## Conventions
 
