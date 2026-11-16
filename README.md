@@ -1,6 +1,6 @@
 # Dot runner
 
-A small project for learning [Preact Signals](https://github.com/preactjs/signals) and [lit-html](https://lit.dev/docs/libraries/standalone-templates/). A red dot moves on a 16×8 grid in the last arrow direction you pressed, and a readout shows its position as one hex byte. The page runs this app twice, built two ways so you can compare them: a **singleton** version, where each part exists once and keeps its state at file level, and a **factory** version, where `main.js` creates the parts. Each version lives in its own folder and shares no code with the other. There is no npm and no build step: the browser loads both libraries as ES modules straight from `vendor/`.
+A small project for learning [Preact Signals](https://github.com/preactjs/signals) and [lit-html](https://lit.dev/docs/libraries/standalone-templates/). A red dot moves on a 16×8 grid in the last arrow direction you pressed, and a readout shows its position as one hex byte. The page runs this app three times, built three ways so you can compare them: a **singleton** version, where each part exists once and keeps its state at file level; a **factory** version, where `main.js` creates the parts by calling functions; and a **class** version, where `main.js` creates them with `new` from JavaScript classes. Each version lives in its own folder and shares no code with the others. There is no npm and no build step: the browser loads both libraries as ES modules straight from `vendor/`.
 
 ## Run
 
@@ -12,7 +12,7 @@ A small project for learning [Preact Signals](https://github.com/preactjs/signal
 uv run --no-project python -m http.server 8000
 ```
 
-Open <http://localhost:8000>. Arrow keys move both dots, Space stops them. Ctrl+C stops the server.
+Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. Ctrl+C stops the server.
 
 - **Why a server:** Chrome refuses to load ES modules (`<script type="module">`) from a `file://` page, so opening `index.html` directly shows the headings but no grids.
 - **Why `--no-project`:** uv skips looking for a `pyproject.toml` and creates no venv. It just runs Python's built-in file server.
@@ -28,21 +28,26 @@ Open <http://localhost:8000>. Arrow keys move both dots, Space stops them. Ctrl+
 <summary>Model, view, controller, main loop; what each file holds</summary>
 <br>
 
-The code is split the way an embedded C program often is: a model (state plus the rule that changes it), a view (draws the state), a controller (reads the keys), and a main loop that feeds the controller's input to the model on a timer. Comments in the code name the C counterpart of each piece (`model_t`, `model_update()`, `view_update()`, `controller_read()`). The app exists twice, in `singleton/` and `factory/`. Each folder holds all five files under the same names and imports nothing from the other; only `vendor/` is shared.
+The code is split the way an embedded C program often is: a model (state plus the rule that changes it), a view (draws the state), a controller (reads the keys), and a main loop that feeds the controller's input to the model on a timer. Comments in the code name the C counterpart of each piece (`model_t`, `model_update()`, `view_update()`, `controller_read()`). The app exists three times, in `singleton/`, `factory/` and `class/`. Each folder holds all five files under the same names and imports nothing from the others; only `vendor/` is shared.
 
 | File | Role |
 |------|------|
-| `index.html` | Page shell: the import map, the grid's CSS, the empty `#app-singleton` and `#app-factory` containers, and one module script per version. |
+| `index.html` | Page shell: the import map, the grid's CSS, the empty `#app-singleton`, `#app-factory` and `#app-class` containers, and one module script per version. |
 | `singleton/model-controller-common.js` | The `Cmd` table: the message the controller sends to the model, shared by those two only, like the C `command` enum. |
 | `singleton/view.js` | `viewUpdate(m, container)`: renders a lit-html template of the model's grid (its `width` × `height`) and the hex readout into the container. Reads signals, writes none. |
 | `singleton/model.js` | Grid size, state and update rule: `WIDTH`, `HEIGHT`, the `row` and `col` signals and `cmd` at file level, and the one `model` object with `width`, `height`, read-only `row`, `col` and `hex` computeds, and `update(c)`. No DOM. |
 | `singleton/controller.js` | Input: a file-level `pending` latch, and the one `controller` object with `keydown(e)`, which latches a key, and `read()`, which hands the tick the latest key and clears it. |
 | `singleton/main.js` | Wiring: `keydown` → `controller.keydown`, a 150 ms timer → `model.update(controller.read())`, `effect` → `viewUpdate` into `#app-singleton`. |
-| `factory/model-controller-common.js` | A byte-identical copy of `singleton/model-controller-common.js`, so the two folders share no file. |
+| `factory/model-controller-common.js` | A byte-identical copy of `singleton/model-controller-common.js`, so the folders share no file. |
 | `factory/view.js` | The same template, behind `createView(container)`: each view keeps the container it draws into, and `view.update(m)` draws. |
 | `factory/model.js` | The same model built by `createModel()`, so each call gives a new, independent one. |
 | `factory/controller.js` | The same controller built by `createController()`, each with its own latch. |
 | `factory/main.js` | The same wiring, after creating one model, one view and one controller; draws into `#app-factory`. |
+| `class/model-controller-common.js` | Another byte-identical copy of `singleton/model-controller-common.js`. |
+| `class/view.js` | The same template, behind `class View`: `new View(container)` keeps the container in a private field, and `view.update(m)` draws. |
+| `class/model.js` | The same model as `class Model`: each `new Model()` gives a new, independent one, with its state in private `#` fields. |
+| `class/controller.js` | The same controller as `class Controller`, each with its own private `#pending` latch. |
+| `class/main.js` | The same wiring, after creating one model, one view and one controller with `new`; wraps the key listener so that `keydown` keeps `this`; draws into `#app-class`. |
 | `vendor/` | lit-html 3.3.3 (`lit-html.js`) and @preact/signals-core 1.14.5 (`signals-core.mjs`, the package's `dist/signals-core.mjs`), the published files used as-is. |
 
 </details>
@@ -50,7 +55,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 ### Terms
 
 <details>
-<summary>semantic HTML, singleton, factory, DOM, import map, arrow keys, div, span, table, Object.freeze, closure, signal, computed, effect, html, container, render</summary>
+<summary>semantic HTML, singleton, factory, DOM, import map, arrow keys, div, span, table, Object.freeze, closure, class, # (private member), signal, computed, effect, html, container, render</summary>
 <br>
 
 - **semantic HTML**: choosing the element whose name says what the content is, such as `<p>` for a paragraph, `<table>` for rows and columns, or `<output>` for a computed result, rather than a generic box made to look right. Screen readers, search engines and browser features rely on that meaning; the look comes from CSS either way.
@@ -67,13 +72,15 @@ The code is split the way an embedded C program often is: a model (state plus th
   ***
 - **Object.freeze** (JS): a function built into JavaScript that locks an object: afterwards its fields cannot be changed, added or deleted, and it cannot be unfrozen. It is shallow (an object stored in a field stays changeable) and does not stop the variable from being pointed at another object; declaring it with `const` does that. In a module (a file loaded with `import` or `<script type="module">`), which always runs in *strict mode*, the mode that turns silent failures into errors, a write to a frozen object throws a `TypeError`; in a classic script without `"use strict"` the same write silently does nothing.
 - **closure** (JS): a function that keeps access to the local variables of the function it was created in, even after that outer function has returned. Think of a struct that only those inner functions hold a pointer to, allocated afresh each time the outer function runs; the garbage collector frees it once nothing refers to it, so there is no `free`. C has no closures. `factory/model.js` uses one so that each `createModel()` call gets its own private `row`, `col` and `cmd`.
+- **class** (JS): a blueprint for objects. `new Model()` builds an *instance*: a new object, filled in by the class's field initializers (such as `#row = signal(4)`) and its `constructor` function, if it has one. Methods such as `update` are stored once, on the class's *prototype*, an object that every instance looks up missing names in, so all instances share them. Inside a method, `this` is the object the method was called on, the one before the dot in `model.update(c)`. A name that starts with `#` is private to the class (next entry). Think of a C struct type plus the functions that take a pointer to it, with `this` as that pointer. Unlike C, the pointer comes from how the function is called, not from a parameter, so a method handed over on its own loses it (see the `class/main.js` walkthrough).
+- **# (private member)** (JS): a `#` at the start of a member's name (a *member* is a field or a method), as in `#row` or `#pending`, makes that member private to its class: only code written inside the class body can read, write or call it. The `#` is part of the name, so `#row` and `row` are two different members. `class/model.js` relies on that: it keeps the writable signal as `#row` and hands out the read-only `row`. The language enforces privacy in two ways. Writing `model.#row` anywhere outside the class body is a `SyntaxError`, so the browser refuses to load that file. Inside the class, using `this.#row` on an object that this class did not build throws a `TypeError`; this is the *brand check*, shown in the `class/main.js` walkthrough. The closest C idiom is an opaque struct, whose fields only `model.c` can see while other files hold just a pointer. Unlike C, where a cast still reaches the memory, no code outside the class can get at a `#` member; only a debugger, such as the browser's developer tools, can show it.
   ***
 - **signal** (Preact): a box holding one value. Code that reads `.value` inside a `computed` or `effect` is subscribed to it; writing a *different* value to `.value` notifies the subscribers. Writing the same value notifies nobody.
 - **computed** (Preact): a read-only signal whose value is a function of other signals. `model.js` hands out `computed` wrappers around `row` and `col`, so code outside the model can read them but not write them.
 - **effect** (Preact): a function that runs immediately, then again whenever a signal it read on its last run changes.
   ***
 - **html** (lit-html): a tag written in front of a backtick string, a *tagged template literal* (see the `view.js` walkthrough). It returns a description of the DOM and does not touch the page.
-- **container** (lit-html): the element that `render` draws into, here `<div id="app-singleton">` or `<div id="app-factory">`. The rest of the page is untouched.
+- **container** (lit-html): the element that `render` draws into, here `<div id="app-singleton">`, `<div id="app-factory">` or `<div id="app-class">`. The rest of the page is untouched.
 - **render** (lit-html): writes that description into a container. On later calls it reuses the DOM it built and goes slot by slot (each `${…}`, walking into nested templates and arrays), updating only the slots whose value changed.
 
 </details>
@@ -84,12 +91,12 @@ The code is split the way an embedded C program often is: a model (state plus th
 <summary>Key press, tick, write, redraw, hex packing</summary>
 <br>
 
-Both apps run this same sequence, each with its own controller, model, view and tick.
+All three apps run this same sequence, each with its own controller, model, view and tick.
 
-1. **Key press.** The browser calls `controller.keydown` (the controller's method, registered in `main.js`), which stores the command in the controller's `pending` latch. The browser pushes events rather than waiting to be polled, so the key waits in `pending` until the next tick reads it. If two keys arrive within one tick, the last one wins.
+1. **Key press.** The browser calls `controller.keydown` (the controller's method, registered in `main.js`; in `class/`, through a small wrapper), which stores the command in the controller's `pending` latch. The browser pushes events rather than waiting to be polled, so the key waits in `pending` until the next tick reads it. If two keys arrive within one tick, the last one wins.
 2. **Tick.** Every 150 ms (about 6.7 steps per second) `setInterval` calls `model.update(controller.read())`; `read` returns `pending` and clears it. `update` remembers the last real command in a plain variable `cmd`, so the dot keeps moving with no key held. `cmd` is not a signal because nothing on screen shows it. Edges wrap: from column 15, RIGHT goes to column 0.
 3. **Write.** `update` writes a new value to `col` or `row`. After Space, it writes nothing, so nothing re-renders.
-4. **Redraw.** On its last run the effect in `main.js` read `row`, `col` and `hex` (through the view), so it re-runs the redraw: `viewUpdate(model, container)` in the singleton, `view.update(model)` in the factory. The view's `template(m)` rebuilds the whole description: 128 cells. `render` then changes only what differs, which for one step is the `class` of two `<td>` cells and the `<output>` text. The saving is in DOM work, not in JavaScript work.
+4. **Redraw.** On its last run the effect in `main.js` read `row`, `col` and `hex` (through the view), so it re-runs the redraw: `viewUpdate(model, container)` in the singleton, `view.update(model)` in the factory and class versions. The view's `template(m)` rebuilds the whole description: 128 cells. `render` then changes only what differs, which for one step is the `class` of two `<td>` cells and the `<output>` text. The saving is in DOM work, not in JavaScript work.
 
 The readout packs the position into one byte: `hex = (row << 4) | col`. Column 0–15 fills the low 4 bits and row 0–7 the next 3, so the range is `00`–`7F`. Example: the start position, row 4 and column 7, gives `(4 << 4) | 7 = 0x40 | 0x07 = 0x47`, shown as `47`.
 
@@ -97,12 +104,12 @@ The readout packs the position into one byte: `hex = (row << 4) | col`. Column 0
 
 ## Code walkthrough
 
-Each file in full, cut into short parts, each part followed by its notes. `index.html` comes first, then the singleton version, then the factory version, whose notes explain only what differs. The notes cover the HTML, CSS and JavaScript as well as the two libraries, so knowing C is enough to follow them. Each file's notes open with the library names it uses, tagged (Preact) or (lit-html), and those names are bold where the notes explain them; everything else is plain HTML, CSS or JavaScript. [How it works](#how-it-works) defines the terms.
+Each file in full, cut into short parts, each part followed by its notes. `index.html` comes first, then the singleton version, then the factory version and the class version, whose notes explain only what differs. The notes cover the HTML, CSS and JavaScript as well as the two libraries, so knowing C is enough to follow them. Each file's notes open with the library names it uses, tagged (Preact) or (lit-html), and those names are bold where the notes explain them; everything else is plain HTML, CSS or JavaScript. [How it works](#how-it-works) defines the terms.
 
 ### `index.html`
 
 <details>
-<summary>Page tree, import map, CSS rules, two containers, two module scripts</summary>
+<summary>Page tree, import map, CSS rules, three containers, three module scripts</summary>
 <br>
 
 Library names: none. The import map only tells the browser where the two libraries live.
@@ -151,15 +158,18 @@ Library names: none. The import map only tells the browser where the two librari
   <div id="app-singleton"></div>
   <h2>factory</h2>
   <div id="app-factory"></div>
+  <h2>class</h2>
+  <div id="app-class"></div>
   <script type="module" src="./singleton/main.js"></script>
   <script type="module" src="./factory/main.js"></script>
+  <script type="module" src="./class/main.js"></script>
 </body>
 </html>
 ```
 
 - `<p>` is a paragraph of text: the instruction line. `<h2>` is a second-level heading, here the label above each app.
-- `<div id="app-singleton">` and `<div id="app-factory">` are empty `<div>`s, the two containers. `id` gives an element a name unique in the page, and `#app-singleton` is the CSS selector for it. JavaScript draws one app into each box.
-- `<script type="module" src="./singleton/main.js">` loads `singleton/main.js` as a module: a file with its own scope, which shares only the names it `export`s and gets other files' names with `import`. That is close to a C file where everything is `static` except what it exports, but there is no linker: the browser fetches each imported file by URL while loading. A module script also waits until the whole page is parsed, so the containers exist by the time it runs. Each of the two scripts starts one app; its imports pull in the other four files of that version's folder, and the libraries.
+- `<div id="app-singleton">`, `<div id="app-factory">` and `<div id="app-class">` are empty `<div>`s, the three containers. `id` gives an element a name unique in the page, and `#app-singleton` is the CSS selector for it. JavaScript draws one app into each box.
+- `<script type="module" src="./singleton/main.js">` loads `singleton/main.js` as a module: a file with its own scope, which shares only the names it `export`s and gets other files' names with `import`. That is close to a C file where everything is `static` except what it exports, but there is no linker: the browser fetches each imported file by URL while loading. A module script also waits until the whole page is parsed, so the containers exist by the time it runs. Each of the three scripts starts one app; its imports pull in the other four files of that version's folder, and the libraries.
 
 </details>
 
@@ -277,7 +287,7 @@ export const model = {
 - `hex: computed(() => (row.value << 4) | col.value)` packs the position into one byte ([How it works](#how-it-works) has the worked example). Ordinary JavaScript numbers are 64-bit floats, but `<<` and `|` convert to 32-bit integers first, so the result matches C for these small values.
 
 ```js
-  update(c) {                               // model_update()
+  update(c) {    // model_update(); shorthand for update: function (c) {
     if (c !== Cmd.NONE) cmd = c;
     switch (cmd) {
       case Cmd.LEFT:  col.value = (col.value + WIDTH - 1) % WIDTH; break;
@@ -328,13 +338,13 @@ let pending = Cmd.NONE;                      // latched key, like KEYPAD bit 7
 ```js
 export const controller = {
   keydown(e) {                               // the keypad latching a key
-    if (e.key in KEYMAP) { pending = KEYMAP[e.key]; e.preventDefault(); }
+    if (Object.hasOwn(KEYMAP, e.key)) { pending = KEYMAP[e.key]; e.preventDefault(); }
   },
 ```
 
 - `export const controller = {` is the one controller, built when the file loads.
 - `keydown(e)` is the method `main.js` hands to the browser for key presses. `e` is the key event object, and `e.key` names the key. It uses `pending` from the file level, so it still works when handed over on its own, detached from the object, as `controller.keydown`.
-- `e.key in KEYMAP` is true when the table has that key. `e.preventDefault()` cancels the browser's own action for the key; arrows and Space would otherwise scroll the page. It runs only for mapped keys, so shortcuts such as F5 still work.
+- `Object.hasOwn(KEYMAP, e.key)`, a JavaScript built-in, is true when the table itself has that key. The shorter `e.key in KEYMAP` would also count names built into every object, such as `'toString'`; no real key has such a name, but `hasOwn` is the habit worth copying. `e.preventDefault()` cancels the browser's own action for the key; arrows and Space would otherwise scroll the page. It runs only for mapped keys, so shortcuts such as F5 still work.
 
 ```js
   read() {                                   // controller_read(): the latched key, or NONE
@@ -499,7 +509,7 @@ export function createModel() {
 - `return {` hands back an object literal with the same fields as the singleton's `model`, `width` and `height` included, which is why the same view template works with either.
 
 ```js
-    update(c) {                             // model_update()
+    update(c) {    // model_update(); shorthand for update: function (c) {
       if (c !== Cmd.NONE) cmd = c;
       switch (cmd) {
         case Cmd.LEFT:  col.value = (col.value + WIDTH - 1) % WIDTH; break;
@@ -547,7 +557,7 @@ export function createController() {
 
 ```js
     keydown(e) {                             // the keypad latching a key
-      if (e.key in KEYMAP) { pending = KEYMAP[e.key]; e.preventDefault(); }
+      if (Object.hasOwn(KEYMAP, e.key)) { pending = KEYMAP[e.key]; e.preventDefault(); }
     },
 ```
 
@@ -623,13 +633,252 @@ effect(() => view.update(model));            // redraw only on change
 
 </details>
 
+### `class/`
+
+<details>
+<summary>model-controller-common.js, view.js, model.js, controller.js, main.js: main.js creates the parts with new</summary>
+<dl><dd>
+
+#### `model-controller-common.js`
+
+<details>
+<summary>Identical to singleton/model-controller-common.js</summary>
+<br>
+
+`class/model-controller-common.js` is a byte-for-byte copy of `singleton/model-controller-common.js` (the first section in the singleton fold above), like the factory's. The boundary check fails if the copies ever differ, so read that section.
+
+</details>
+
+#### `view.js`
+
+<details>
+<summary>What changes from the factory: class View, a private field, the constructor</summary>
+<br>
+
+Library names: **`html`** and **`render`** (lit-html), **`.value`** (Preact). Only what differs from `factory/view.js` is explained here.
+
+```js
+import { html, render } from 'lit-html';
+```
+
+- The same import as `factory/view.js`.
+
+```js
+const range = n => [...Array(n).keys()];
+```
+
+- The same `range` helper.
+
+```js
+const template = m => html`
+  <table class="matrix">
+    ${range(m.height).map(r => html`<tr>
+      ${range(m.width).map(c => html`<td class=${r === m.row.value && c === m.col.value ? 'on' : ''}></td>`)}
+    </tr>`)}
+  </table>
+  <output>${m.hex.value.toString(16).toUpperCase().padStart(2, '0')}</output>`;
+```
+
+- The same template as the factory's, at file level for the same reason: it holds no state.
+
+```js
+export class View {
+  #container;                               // each view keeps only where it draws
+```
+
+- `export class View {` starts a class (see [Terms](#terms)): a blueprint that `main.js` turns into a view with `new View(container)`. It plays the part of `createView`.
+- `#container;` declares a private field. Each view gets its own `#container`, which starts as `undefined` and which only code inside these braces can read or write. It replaces the factory's closure variable `container`.
+
+```js
+  constructor(container) {
+    this.#container = container;
+  }
+```
+
+- `constructor(container)` is the function that `new View(container)` runs on the fresh view, after its fields are set up. There `this` is the new view, so `this.#container = container` stores the argument in that view's private field. The factory needs no such step: its closure keeps the `container` parameter itself.
+
+```js
+  update(m) {                               // view_update()
+    render(template(m), this.#container);
+  }
+}
+```
+
+- `update(m)` is a method: written once, stored on the class's prototype, and shared by every view. When `main.js` calls `view.update(model)`, `this` is `view`, so `this.#container` is that view's own container. The last two lines close `update` and the class.
+
+</details>
+
+#### `model.js`
+
+<details>
+<summary>What changes from the factory: class Model, private fields, this</summary>
+<br>
+
+Library names: **`signal`**, **`computed`** and **`.value`** (Preact). Only what differs from `factory/model.js` is explained here.
+
+```js
+import { signal, computed } from '@preact/signals-core';
+import { Cmd } from './model-controller-common.js';
+```
+
+- The same imports as `factory/model.js`.
+
+```js
+const WIDTH = 16, HEIGHT = 8;               // grid size, owned by the model
+```
+
+- The same grid size, again at file level because it never changes.
+
+```js
+export class Model {
+  #row = signal(4); #col = signal(7);       // private (#), like fields of model_t
+  #cmd = Cmd.STOP;                          // not shown on screen, so plain variable
+  width = WIDTH; height = HEIGHT;           // the view draws whatever size the model says
+  row = computed(() => this.#row.value);    // read-only to outsiders: const model_t *
+  col = computed(() => this.#col.value);
+  hex = computed(() => (this.#row.value << 4) | this.#col.value);
+```
+
+- `export class Model {` plays the part of `createModel`, and `new Model()` the part of `createModel()`.
+- Each `name = value;` in the class body declares a field. `new Model()` runs every initializer again, in order, for each new model, so each model gets its own two signals and its own `#cmd`, just as each `createModel()` call got its own local variables.
+- `#row`, `#col` and `#cmd` are private fields, the class's replacement for the factory's closure variables. Code outside the class body cannot even name them: `model.#row` there is a `SyntaxError`, and the browser refuses to load that file.
+- `width`, `height`, `row`, `col` and `hex` are public fields, the same five the factory's object has, so the view reads either one the same way.
+- `computed(() => this.#row.value)`: an arrow function has no `this` of its own; it uses the `this` of the code around it. Field initializers run inside `new`, where `this` is the new model, so each computed reads its own model's `#row`.
+
+```js
+  update(c) {    // model_update(); a method on Model.prototype, shared by all models
+    if (c !== Cmd.NONE) this.#cmd = c;
+    switch (this.#cmd) {
+      case Cmd.LEFT:  this.#col.value = (this.#col.value + WIDTH - 1) % WIDTH; break;
+      case Cmd.RIGHT: this.#col.value = (this.#col.value + 1) % WIDTH;         break;
+      case Cmd.UP:    this.#row.value = (this.#row.value + HEIGHT - 1) % HEIGHT; break;
+      case Cmd.DOWN:  this.#row.value = (this.#row.value + 1) % HEIGHT;        break;
+    }
+  }
+}
+```
+
+- `update(c)` is the factory's rule with each state name written as `this.#name`: the private field of the model it was called on. It is a method, so unlike the factory's `update` it exists once, on the prototype, shared by every model. Unlike in the other two versions, `update(c) {` here is not shorthand for `update: function (c) {`: a class body does not allow that colon form, and it is a `SyntaxError`. `this` tells it which model's fields to use, the way `mp` does in C's `model_update(mp, c)`. The last two lines close `update` and the class.
+
+</details>
+
+#### `controller.js`
+
+<details>
+<summary>What changes from the factory: class Controller, a private latch, a plain method</summary>
+<br>
+
+Library names: none. Only what differs from `factory/controller.js` is explained here.
+
+```js
+import { Cmd } from './model-controller-common.js';
+```
+
+- The same import as `factory/controller.js`.
+
+```js
+const KEYMAP = Object.freeze({ ArrowUp: Cmd.UP, ArrowDown: Cmd.DOWN, ArrowLeft: Cmd.LEFT,
+                               ArrowRight: Cmd.RIGHT, ' ': Cmd.STOP });
+```
+
+- The same frozen `KEYMAP`, shared by every controller.
+
+```js
+export class Controller {
+  #pending = Cmd.NONE;                       // latched key, like KEYPAD bit 7
+```
+
+- `#pending` is the latch, now a private field, so each `new Controller()` gets its own.
+
+```js
+  keydown(e) {                               // the keypad latching a key
+    if (Object.hasOwn(KEYMAP, e.key)) { this.#pending = KEYMAP[e.key]; e.preventDefault(); }
+  }
+```
+
+- `keydown(e)` is the factory's code, writing `this.#pending`. It is a plain method, so it works only when called on its controller, as `controller.keydown(e)`. Handed to the browser on its own, it would lose `this`; `main.js` below shows the trap and the fix.
+
+```js
+  read() {                                   // controller_read(): the latched key, or NONE
+    const c = this.#pending;
+    this.#pending = Cmd.NONE;
+    return c;
+  }
+}
+```
+
+- `read()` is the factory's code. The tick always calls it as `controller.read()`, so `this` is right. The last two lines close `read` and the class.
+
+</details>
+
+#### `main.js`
+
+<details>
+<summary>What changes from the factory: new, the wrapped key listener, the this trap</summary>
+<br>
+
+Library names: **`effect`** (Preact). Only what differs from `factory/main.js` is explained here.
+
+```js
+import { effect } from '@preact/signals-core';
+```
+
+- The same import as `factory/main.js`.
+
+```js
+import { Model } from './model.js';
+import { View } from './view.js';
+import { Controller } from './controller.js';
+```
+
+- This version imports the classes. By convention a class name starts with a capital letter, which tells the reader to use `new`.
+
+```js
+const model = new Model();
+const view = new View(document.querySelector('#app-class'));
+const controller = new Controller();
+```
+
+- `new Model()`, `new View(…)` and `new Controller()` do what the factory's three calls do: this file decides that there is one of each, and the view is told its container once. Forgetting `new` fails straight away: `Model()` throws `TypeError: Class constructor Model cannot be invoked without 'new'`.
+
+```js
+window.addEventListener('keydown', e => controller.keydown(e));  // wrapped: passed alone, keydown would lose `this`
+```
+
+- This is the one line that has to differ from the other versions. `this` is set by how a function is called, not by where it was written: `controller.keydown(e)` runs `keydown` with `this` set to `controller`, the object before the dot. The arrow function `e => controller.keydown(e)` makes exactly that call on every key press. (Another fix is in the footnote below.)
+- Without the wrapper, `addEventListener('keydown', controller.keydown)` hands over only the function. The browser calls a listener with `this` set to the object the listener is attached to, so here it runs as if `window.keydown(e)`, and `this.#pending = …` throws `TypeError: Cannot write private member #pending to an object whose class did not declare it`. Only arrows and Space get that far; other keys never reach the write. The throw comes before `e.preventDefault()`, so the key also does its normal job, such as scrolling the page when the page is taller than the window. On screen the dot simply ignores the keys; the error appears only in the browser's developer console.
+- That error comes from the `#` field's *brand check*: before touching `#pending`, the browser checks that `this` really is a `Controller`. With a public field, `this.pending = …` would pass silently and create `window.pending` instead, a stray global that nothing reads.
+- The wrapper is a new function, made on this line. Removing the listener later with `removeEventListener` would need that same function, so you would have to keep it in a variable first. This app never removes it.
+
+```js
+setInterval(() => {                          // the NMI tick
+  model.update(controller.read());
+}, 150);
+```
+
+- The same tick as `factory/main.js`. Both calls are made on their objects, so `this` is right without a wrapper.
+
+```js
+effect(() => view.update(model));            // redraw only on change
+```
+
+- The same redraw effect as `factory/main.js`, drawing into `#app-class`.
+
+**Footnote: another fix, `handleEvent`.** `addEventListener` also accepts an object instead of a function. The browser then calls that object's `handleEvent(e)` method, with `this` set to the object. Renaming `keydown` to `handleEvent` would let this file write `window.addEventListener('keydown', controller)`, handing over the controller itself. Pros: a plain method that gets the right `this` by the browser's own rule, no wrapper, and `removeEventListener('keydown', controller)` works. Cons: it is a convention of the browser's event system only, the fixed name loses the descriptive `keydown`, and an object that handles several event types needs a `switch (e.type)` inside `handleEvent`. This version uses the wrapper because it keeps the trap visible on the line where it happens.
+
+</details>
+
+</dd></dl>
+
+</details>
+
 ## Singleton vs factory
 
 <details>
-<summary>Plain difference, the C comparison, obvious and subtle differences, pros and cons, which to use</summary>
+<summary>Plain difference, the C comparison, obvious and subtle differences, pros and cons, factory vs class, which to use</summary>
 <br>
 
-The two versions behave identically here: same model and controller objects, same output. The difference is **when the state is created and how many copies can exist**. A singleton gets exactly one copy, created automatically the first time any file imports it. A factory makes a new, independent copy every time `main.js` calls `createModel()`.
+The versions behave identically here: same model and controller objects, same output. The difference is **when the state is created and how many copies can exist**. A singleton gets exactly one copy, created automatically the first time any file imports it. A factory makes a new, independent copy every time `main.js` calls `createModel()`. The class version is a factory written with JavaScript's `class` syntax: `new Model()` also makes a new copy each time. [Factory vs class](#factory-vs-class) compares those two.
 
 The C original already uses both styles. `controller_read()` keeps its state in `static` variables, so exactly one exists: singleton-style. The model is factory-style: `model_t` is a struct, `model_init(mp)` initializes one, and `model_update(mp, c)` works on whichever one it is given. The JavaScript factory does the same, but instead of passing a pointer, each `update` remembers its own state through a closure (see [Terms](#terms)).
 
@@ -646,7 +895,7 @@ The C original already uses both styles. `controller_read()` keeps its state in 
 | Where the state lives | file-level variables, like C `static` | local variables inside the factory, kept alive by the closure |
 | What `main.js` does | `import { model }`, and it already exists | `import { createModel }`, then `const model = createModel()` |
 
-That last row is the whole visible difference. In the two `main.js` files it comes to the two "create" lines plus the import names.
+That last row is the whole visible difference. Between `singleton/main.js` and `factory/main.js` it comes to the three "create" lines, the import names, and the redraw line, which no longer looks up its container.
 
 </details>
 
@@ -662,7 +911,7 @@ That last row is the whole visible difference. In the two `main.js` files it com
 4. **Resetting and testing.** Singleton state lives until the page reloads. Resetting it needs an extra `reset()` function, and tests that import it share leftover state between them. With a factory, you just make a fresh one.
 5. **A factory's classic trap is creating two by accident.** If `createModel()` is called in two places, you silently get two separate dots. One view might draw one model while the keys drive the other, with no error anywhere. A singleton can't have this bug.
 6. **Each factory copy gets its own set of functions.** Every `createModel()` call builds new `update` and `computed` functions; the singleton builds them once. Irrelevant at two copies, worth knowing at ten thousand.
-7. **Both versions survive being handed over detached, as `controller.keydown`,** because neither uses `this` (JavaScript's name for the object a method was called on). A rewrite as a `class` that stores `this.pending` would break when `controller.keydown` is handed over on its own, a common trap for C programmers moving to JavaScript.
+7. **The singleton and factory methods survive being handed over detached, as `controller.keydown`,** because neither uses `this` (JavaScript's name for the object a method was called on). The class version's methods do use `this`, so `class/main.js` has to wrap its key listener; its walkthrough shows what breaks without the wrapper, a common trap for C programmers moving to JavaScript.
 
 </details>
 
@@ -696,13 +945,34 @@ That last row is the whole visible difference. In the two `main.js` files it com
 
 </details>
 
+### Factory vs class
+
+<details>
+<summary>Making one, where state lives, how methods find it, shared methods, detaching, privacy</summary>
+<br>
+
+A class is another way to write a factory: both make as many independent copies as `main.js` asks for. What differs is how each copy's methods find that copy's state.
+
+| | Factory (`factory/`) | Class (`class/`) |
+|---|---|---|
+| Making one | `createModel()` | `new Model()`; without `new` it throws a `TypeError` |
+| Where a copy's state lives | local variables of that `createModel()` call, kept alive by the closure | `#` private fields on the object itself |
+| How a method finds it | through the closure, fixed when the copy was made | through `this`, taken from each call (`model.update(c)`) |
+| Methods | a new set of functions per copy | one shared set, on the prototype; the `computed` fields are still made per copy |
+| A method handed over on its own | works | loses `this`; wrap it, as `class/main.js` does |
+| Privacy | complete: nothing outside can name the locals | complete: a `#` name outside the class body is a `SyntaxError`; and a method run on the wrong object throws instead of writing to it |
+
+The class costs one more concept, `this`, and the trap that comes with it. In return its methods exist once however many copies there are, which matters at tens of thousands of copies, not at one. Classes are also worth being able to read because some browser features are built around them: a web component, for example, is defined as a class that extends `HTMLElement`.
+
+</details>
+
 ### Which to use
 
 <details>
 <summary>One physical thing or many; switching later</summary>
 <br>
 
-Use a **singleton** for things the physical world limits to one: one keyboard, one screen. That is why a singleton controller feels natural. Use a **factory** as soon as you need a second copy, settings per copy, or tests. Switching later is mechanical, and the diff between the two folders is exactly that change:
+Use a **singleton** for things the physical world limits to one: one keyboard, one screen. That is why a singleton controller feels natural. Use a **factory** as soon as you need a second copy, settings per copy, or tests. Switching later is mechanical, and the diff between `singleton/` and `factory/` is exactly that change:
 
 1. wrap the file-level state in a function;
 2. `return` the object;
@@ -727,7 +997,7 @@ Neither choice locks you in.
 | `.claude/skills/wrapup/SKILL.md` | `/wrapup` rewrites `.claude/PROGRESS.md` as a handoff for the work since the previous one, then commits. It runs only when you type it. |
 | `.claude/rules/markdown.md` | How to write README.md and docs/: which `##` sections fold. Claude Code loads it when working on those files. |
 | `.claude/PROGRESS.md` | Latest session handoff, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`. |
-| `.checks/boundaries.py` | Checks the MVC boundaries in CLAUDE.md's Architecture rules: who may import what, each folder only from itself; browser globals and `effect` only in `main.js`; signal writes only in `model.js`; `model.update` and the view used only from `main.js`; file-level changing state only in `singleton/`; the two `model-controller-common.js` copies identical. Run `uv run --no-project python .checks/boundaries.py`. The `PostToolUse` hook runs it after every Edit or Write and tells Claude Code what it broke; it can't undo the edit, and shell edits skip it. |
+| `.checks/boundaries.py` | Checks the MVC boundaries in CLAUDE.md's Architecture rules: who may import what, each folder only from itself; browser globals and `effect` only in `main.js`; signal writes only in `model.js`; `model.update` and the view used only from `main.js`; file-level changing state only in `singleton/`; the `model-controller-common.js` copies identical. Run `uv run --no-project python .checks/boundaries.py`. The `PostToolUse` hook runs it after every Edit or Write and tells Claude Code what it broke; it can't undo the edit, and shell edits skip it. |
 | `.checks/stop-hook.sh` | The `Stop` hook: runs the same check when Claude Code tries to finish a turn and, on a violation, sends it back to fix the code first. If the violation survives one round, it lets the turn end but shows you a warning, so it can't loop forever. |
 | `.gitignore` | OS cruft, Python/uv venv, editor files. |
 | `.gitattributes` | LF line endings; binary file types; no line diffs for the minified `vendor/` files. |

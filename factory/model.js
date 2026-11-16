@@ -11,7 +11,7 @@ export function createModel() {
     row: computed(() => row.value),         // read-only to outsiders: const model_t *
     col: computed(() => col.value),
     hex: computed(() => (row.value << 4) | col.value),
-    update(c) {                             // model_update()
+    update(c) {    // model_update(); shorthand for update: function (c) {
       if (c !== Cmd.NONE) cmd = c;
       switch (cmd) {
         case Cmd.LEFT:  col.value = (col.value + WIDTH - 1) % WIDTH; break;

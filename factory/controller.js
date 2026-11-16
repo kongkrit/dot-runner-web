@@ -7,7 +7,7 @@ export function createController() {
   let pending = Cmd.NONE;                    // latched key, like KEYPAD bit 7
   return {
     keydown(e) {                             // the keypad latching a key
-      if (e.key in KEYMAP) { pending = KEYMAP[e.key]; e.preventDefault(); }
+      if (Object.hasOwn(KEYMAP, e.key)) { pending = KEYMAP[e.key]; e.preventDefault(); }
     },
     read() {                                 // controller_read(): the latched key, or NONE
       const c = pending;

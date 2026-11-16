@@ -38,12 +38,13 @@ RULES = [
     # let/var, or a const holding an array, object or new instance (Object.freeze(...) is fine)
     (r"^(?:export\s+)?(?:let|var)\b|^(?:export\s+)?const\s+[\w$]+\s*=\s*(?:\[|\{|new\b)",
      {"*/main.js", "singleton/*"},
-     "file-level changing state only in singleton/ (factory parts keep it inside the factory)"),
-    (r"\b(?:viewUpdate|createView)\b", {"*/view.js", "*/main.js"}, "only main.js uses the view"),
+     "file-level changing state only in singleton/ (factory/ and class/ keep it per instance)"),
+    (r"\b(?:viewUpdate|createView|View)\b", {"*/view.js", "*/main.js"}, "only main.js uses the view"),
 ]
 
 # Deliberate copies that must stay byte-identical (the README walkthrough only points to the original).
-COPIES = {"factory/model-controller-common.js": "singleton/model-controller-common.js"}
+COPIES = {"factory/model-controller-common.js": "singleton/model-controller-common.js",
+          "class/model-controller-common.js": "singleton/model-controller-common.js"}
 
 # A redraw call: viewUpdate(...) in singleton/, view.update(...) in factory/.
 REDRAW = r"\b(?:viewUpdate|view\.update)\s*\("
