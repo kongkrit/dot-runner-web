@@ -872,7 +872,7 @@ effect(() => view.update(model));            // redraw only on change
 
 </details>
 
-## Singleton vs factory
+## Singleton vs factory vs class
 
 <details>
 <summary>Plain difference, the C comparison, obvious and subtle differences, pros and cons, factory vs class, which to use</summary>
@@ -880,7 +880,7 @@ effect(() => view.update(model));            // redraw only on change
 
 The versions behave identically here: same model and controller objects, same output. The difference is **when the state is created and how many copies can exist**. A singleton gets exactly one copy, created automatically the first time any file imports it. A factory makes a new, independent copy every time `main.js` calls `createModel()`. The class version is a factory written with JavaScript's `class` syntax: `new Model()` also makes a new copy each time. [Factory vs class](#factory-vs-class) compares those two.
 
-The C original already uses both styles. `controller_read()` keeps its state in `static` variables, so exactly one exists: singleton-style. The model is factory-style: `model_t` is a struct, `model_init(mp)` initializes one, and `model_update(mp, c)` works on whichever one it is given. The JavaScript factory does the same, but instead of passing a pointer, each `update` remembers its own state through a closure (see [Terms](#terms)).
+The C original already uses both styles. `controller_read()` keeps its state in `static` variables, so exactly one exists: singleton-style. The model is factory-style: `model_t` is a struct, `model_init(mp)` initializes one, and `model_update(mp, c)` works on whichever one it is given. The JavaScript factory does the same, but instead of passing a pointer, each `update` remembers its own state through a closure (see [Terms](#terms)). The class is closest to the C: `this` plays the part of `mp`, except that the call supplies it (`model.update(c)`) instead of a parameter.
 
 ### Obvious differences
 
@@ -888,14 +888,14 @@ The C original already uses both styles. `controller_read()` keeps its state in 
 <summary>How many, when created, where the state lives, what main.js does</summary>
 <br>
 
-| | Singleton | Factory |
-|---|---|---|
-| How many | exactly one | as many as you create |
-| When it's created | when the file is first imported | when `main.js` calls `createModel()` |
-| Where the state lives | file-level variables, like C `static` | local variables inside the factory, kept alive by the closure |
-| What `main.js` does | `import { model }`, and it already exists | `import { createModel }`, then `const model = createModel()` |
+| | Singleton | Factory | Class |
+|---|---|---|---|
+| How many | exactly one | as many as you create | as many as you create |
+| When it's created | when the file is first imported | when `main.js` calls `createModel()` | when `main.js` calls `new Model()` |
+| Where the state lives | file-level variables, like C `static` | local variables inside the factory, kept alive by the closure | `#` private fields on each object |
+| What `main.js` does | `import { model }`, and it already exists | `import { createModel }`, then `const model = createModel()` | `import { Model }`, then `const model = new Model()` |
 
-That last row is the whole visible difference. Between `singleton/main.js` and `factory/main.js` it comes to the three "create" lines, the import names, and the redraw line, which no longer looks up its container.
+That last row is the whole visible difference. Between `singleton/main.js` and `factory/main.js` it comes to the three "create" lines, the import names, and the redraw line, which no longer looks up its container. `class/main.js` differs from `factory/main.js` in the same create lines and imports, which use `new`, and in the wrapped key listener.
 
 </details>
 
@@ -910,7 +910,7 @@ That last row is the whole visible difference. Between `singleton/main.js` and `
 3. **A singleton can't take settings when it's created.** Its start position and grid size are fixed in the file, because it builds itself before any other code runs. A factory could take them as arguments, as in `createModel({ width: 32, start: [0, 0] })`. In C terms: a static initializer versus an `init(&m, args)` function.
 4. **Resetting and testing.** Singleton state lives until the page reloads. Resetting it needs an extra `reset()` function, and tests that import it share leftover state between them. With a factory, you just make a fresh one.
 5. **A factory's classic trap is creating two by accident.** If `createModel()` is called in two places, you silently get two separate dots. One view might draw one model while the keys drive the other, with no error anywhere. A singleton can't have this bug.
-6. **Each factory copy gets its own set of functions.** Every `createModel()` call builds new `update` and `computed` functions; the singleton builds them once. Irrelevant at two copies, worth knowing at ten thousand.
+6. **Each factory copy gets its own set of functions.** Every `createModel()` call builds new `update` and `computed` functions; the singleton builds them once, and the class shares one `update` among all its copies (see [Factory vs class](#factory-vs-class)). Irrelevant at two copies, worth knowing at ten thousand.
 7. **The singleton and factory methods survive being handed over detached, as `controller.keydown`,** because neither uses `this` (JavaScript's name for the object a method was called on). The class version's methods do use `this`, so `class/main.js` has to wrap its key listener; its walkthrough shows what breaks without the wrapper, a common trap for C programmers moving to JavaScript.
 
 </details>
@@ -918,7 +918,7 @@ That last row is the whole visible difference. Between `singleton/main.js` and `
 ### Pros and cons
 
 <details>
-<summary>Singleton, factory</summary>
+<summary>Singleton, factory, class</summary>
 <br>
 
 **Singleton**
@@ -943,6 +943,16 @@ That last row is the whole visible difference. Between `singleton/main.js` and `
   - You can accidentally create two.
   - Slightly more memory per copy.
 
+**Class**
+- **Pros:**
+  - Any number of independent copies, like a factory.
+  - Methods are stored once and shared by every copy, which matters at tens of thousands of copies, not at one.
+  - A `#` field used on the wrong object throws, instead of failing silently.
+  - Some browser features are built around classes: a web component, for example, is defined as a class that extends `HTMLElement`.
+- **Cons:**
+  - Two more concepts than the factory: `this` and `new`.
+  - A method handed over on its own loses `this`, so every hand-over needs a wrapper.
+
 </details>
 
 ### Factory vs class
@@ -962,14 +972,12 @@ A class is another way to write a factory: both make as many independent copies 
 | A method handed over on its own | works | loses `this`; wrap it, as `class/main.js` does |
 | Privacy | complete: nothing outside can name the locals | complete: a `#` name outside the class body is a `SyntaxError`; and a method run on the wrong object throws instead of writing to it |
 
-The class costs one more concept, `this`, and the trap that comes with it. In return its methods exist once however many copies there are, which matters at tens of thousands of copies, not at one. Classes are also worth being able to read because some browser features are built around them: a web component, for example, is defined as a class that extends `HTMLElement`.
-
 </details>
 
 ### Which to use
 
 <details>
-<summary>One physical thing or many; switching later</summary>
+<summary>One physical thing or many; switching later; when a class</summary>
 <br>
 
 Use a **singleton** for things the physical world limits to one: one keyboard, one screen. That is why a singleton controller feels natural. Use a **factory** as soon as you need a second copy, settings per copy, or tests. Switching later is mechanical, and the diff between `singleton/` and `factory/` is exactly that change:
@@ -978,7 +986,7 @@ Use a **singleton** for things the physical world limits to one: one keyboard, o
 2. `return` the object;
 3. have `main.js` call that function.
 
-Neither choice locks you in.
+Use a **class** for the same jobs as a factory when there will be very many copies, since its methods are stored once, or when a library or browser feature expects one. No choice locks you in.
 
 </details>
 
