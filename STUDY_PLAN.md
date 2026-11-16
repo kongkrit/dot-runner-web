@@ -15,7 +15,7 @@ You can, but it costs more than it saves:
 **Read:**
 
 1. The README introduction and [Run](README.md#run): how the page is served, and why it needs a server.
-2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *import map*, *signal*, *effect*, *html*, *container*, *render*. Skip the rest for now.
+2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *import map*, *=> (arrow function)*, *signal*, *effect*, *html*, *container*, *render*. Skip the rest for now.
 3. [Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml): the import map and module scripts. The hello world's `index.html` below is a trimmed copy.
 
 **Build:** outside the repo, so nothing here is checked against the repo's rules. From the repo root:

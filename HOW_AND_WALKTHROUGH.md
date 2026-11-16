@@ -37,33 +37,72 @@ The code is split the way an embedded C program often is: a model (state plus th
 ### Terms
 
 <details>
-<summary>semantic HTML, singleton, factory, DOM, import map, arrow keys, div, span, table, Object.freeze, closure, class, # (private member), signal, computed, effect, html, container, render</summary>
+<summary>General, Browser, HTML, JS, Preact, lit-html</summary>
+<dl><dd>
+
+<details>
+<summary>General: semantic HTML, singleton, factory</summary>
 <br>
 
 - **semantic HTML**: choosing the element whose name says what the content is, such as `<p>` for a paragraph, `<table>` for rows and columns, or `<output>` for a computed result, rather than a generic box made to look right. Screen readers, search engines and browser features rely on that meaning; the look comes from CSS either way.
 - **singleton**: a part that exists exactly once, built when its file loads, with its state in file-level variables, like `static` variables in a C file. Like a block hard-wired into a chip at a fixed address.
 - **factory**: a function that builds and returns a new instance each time it is called, such as `createModel()`, so `main.js` decides how many there are. Like a Verilog module that the top level instantiates, each instance with its own flip-flops; unlike hardware, instances are made while the program runs and freed automatically when nothing uses them.
-  ***
-- **DOM** (browser): the tree of elements the browser builds from the HTML and draws on screen. JavaScript changes the page by changing this tree, and the browser redraws to match.
-- **import map** (browser): a JSON block in the page that tells the browser which file a bare module name such as `lit-html` means. In an npm project a bundler does this job.
-- **ArrowUp, ArrowDown, ArrowLeft, ArrowRight** (browser): the values the browser puts in a key event's `key` field when an arrow key is pressed. `controller.js` uses them as the keys of its `KEYMAP` table.
-  ***
-- **div** (HTML): a generic box with no meaning of its own, the opposite of semantic. It groups things or gives CSS and JavaScript something to find. It is a *block* element: it starts on its own line, takes the full width, and may contain almost anything, tables included. The three app containers are `<div>`s.
-- **span** (HTML): the *inline* counterpart of `div`, just as meaningless but flowing inside a line of text like a word. It may contain only text and other inline elements (`<b>`, `<code>`, `<output>`), never blocks such as `<div>` or `<table>`. Use a `div` to group blocks and a `span` to mark a few words or a value inside a line. lit-html's `render` can draw into either; the browser does not stop a `<table>` inside a `<span>`, but that is invalid HTML.
-- **table, tr, td** (HTML): a table, a row in it (*table row*), and a cell in a row (*table data*). Here 8 `<tr>` of 16 `<td>` each make the grid.
-  ***
-- **Object.freeze** (JS): a function built into JavaScript that locks an object: afterwards its fields cannot be changed, added or deleted, and it cannot be unfrozen. It is shallow (an object stored in a field stays changeable) and does not stop the variable from being pointed at another object; declaring it with `const` does that. In a module (a file loaded with `import` or `<script type="module">`), which always runs in *strict mode*, the mode that turns silent failures into errors, a write to a frozen object throws a `TypeError`; in a classic script without `"use strict"` the same write silently does nothing.
-- **closure** (JS): a function that keeps access to the local variables of the function it was created in, even after that outer function has returned. Think of a struct that only those inner functions hold a pointer to, allocated afresh each time the outer function runs; the garbage collector frees it once nothing refers to it, so there is no `free`. C has no closures. `factory/model.js` uses one so that each `createModel()` call gets its own private `row`, `col` and `cmd`.
-- **class** (JS): a blueprint for objects. `new Model()` builds an *instance* with its own fields; methods such as `update` are stored once, on the class's *prototype*, and shared by all instances. Inside a method, `this` is the object before the dot, as in `model.update(c)`. Like a C struct type plus functions taking a pointer to it, except that `this` comes from the call, so a method handed over on its own loses it.
-- **# (private member)** (JS): a field or method whose name starts with `#`, such as `#row`, can be used only by code inside its class. The `#` is part of the name, so `#row` and `row` are different members. Using `model.#row` outside the class is a `SyntaxError`. Like an opaque C struct (its fields visible only in its own `.c` file), but no cast can get around it.
-  ***
-- **signal** (Preact): a box holding one value. Code that reads `.value` inside a `computed` or `effect` is subscribed to it; writing a *different* value to `.value` notifies the subscribers. Writing the same value notifies nobody.
-- **computed** (Preact): a read-only signal whose value is a function of other signals. `model.js` hands out `computed` wrappers around `row` and `col`, so code outside the model can read them but not write them.
-- **effect** (Preact): a function that runs immediately, then again whenever a signal it read on its last run changes.
-  ***
-- **html** (lit-html): a tag written in front of a backtick string, a *tagged template literal* (see the `view.js` walkthrough). It returns a description of the DOM and does not touch the page.
-- **container** (lit-html): the element that `render` draws into, here `<div id="app-singleton">`, `<div id="app-factory">` or `<div id="app-class">`. The rest of the page is untouched.
-- **render** (lit-html): writes that description into a container. On later calls it reuses the DOM it built and goes slot by slot (each `${…}`, walking into nested templates and arrays), updating only the slots whose value changed.
+
+</details>
+
+<details>
+<summary>Browser: DOM, import map, arrow keys</summary>
+<br>
+
+- **DOM**: the tree of elements the browser builds from the HTML and draws on screen. JavaScript changes the page by changing this tree, and the browser redraws to match.
+- **import map**: a JSON block in the page that tells the browser which file a bare module name such as `lit-html` means. In an npm project a bundler does this job.
+- **ArrowUp, ArrowDown, ArrowLeft, ArrowRight**: the values the browser puts in a key event's `key` field when an arrow key is pressed. `controller.js` uses them as the keys of its `KEYMAP` table.
+
+</details>
+
+<details>
+<summary>HTML: div, span, table</summary>
+<br>
+
+- **div**: a generic box with no meaning of its own, the opposite of semantic. It groups things or gives CSS and JavaScript something to find. It is a *block* element: it starts on its own line, takes the full width, and may contain almost anything, tables included. The three app containers are `<div>`s.
+- **span**: the *inline* counterpart of `div`, just as meaningless but flowing inside a line of text like a word. It may contain only text and other inline elements (`<b>`, `<code>`, `<output>`), never blocks such as `<div>` or `<table>`. Use a `div` to group blocks and a `span` to mark a few words or a value inside a line. lit-html's `render` can draw into either; the browser does not stop a `<table>` inside a `<span>`, but that is invalid HTML.
+- **table, tr, td**: a table, a row in it (*table row*), and a cell in a row (*table data*). Here 8 `<tr>` of 16 `<td>` each make the grid.
+
+</details>
+
+<details>
+<summary>JS: => (arrow function), Object.freeze, closure, class, # (private member)</summary>
+<br>
+
+- **=> (arrow function)**: a short way to write a function in place, often as an argument: the parameters go left of `=>`, the body right. `n => n + 1` takes `n` and returns `n + 1`; `() => …` takes nothing and `(a, b) => …` takes two. A body without braces is one expression, and its value is returned; a body in braces, as in `setInterval(() => { … }, 150)`, is a block of statements and returns a value only through `return`. It is written without a name; `const range = n => …` stores one in a variable so it can be called as `range(3)`. Unlike a function written with `function`, it has no `this` of its own and uses the `this` of the code around it, which is how `computed(() => this.#row.value)` in `class/model.js` reads its own model. C has no counterpart; the nearest is passing a pointer to a named function defined elsewhere, like `qsort`'s comparator.
+- **Object.freeze**: a function built into JavaScript that locks an object: afterwards its fields cannot be changed, added or deleted, and it cannot be unfrozen. It is shallow (an object stored in a field stays changeable) and does not stop the variable from being pointed at another object; declaring it with `const` does that. In a module (a file loaded with `import` or `<script type="module">`), which always runs in *strict mode*, the mode that turns silent failures into errors, a write to a frozen object throws a `TypeError`; in a classic script without `"use strict"` the same write silently does nothing.
+- **closure**: a function that keeps access to the local variables of the function it was created in, even after that outer function has returned. Think of a struct that only those inner functions hold a pointer to, allocated afresh each time the outer function runs; the garbage collector frees it once nothing refers to it, so there is no `free`. C has no closures. `factory/model.js` uses one so that each `createModel()` call gets its own private `row`, `col` and `cmd`.
+- **class**: a blueprint for objects. `new Model()` builds an *instance* with its own fields; methods such as `update` are stored once, on the class's *prototype*, and shared by all instances. Inside a method, `this` is the object before the dot, as in `model.update(c)`. Like a C struct type plus functions taking a pointer to it, except that `this` comes from the call, so a method handed over on its own loses it.
+- **# (private member)**: a field or method whose name starts with `#`, such as `#row`, can be used only by code inside its class. The `#` is part of the name, so `#row` and `row` are different members. Using `model.#row` outside the class is a `SyntaxError`. Like an opaque C struct (its fields visible only in its own `.c` file), but no cast can get around it.
+
+</details>
+
+<details>
+<summary>Preact: signal, computed, effect</summary>
+<br>
+
+- **signal**: a box holding one value. Code that reads `.value` inside a `computed` or `effect` is subscribed to it; writing a *different* value to `.value` notifies the subscribers. Writing the same value notifies nobody.
+- **computed**: a read-only signal whose value is a function of other signals. `model.js` hands out `computed` wrappers around `row` and `col`, so code outside the model can read them but not write them.
+- **effect**: a function that runs immediately, then again whenever a signal it read on its last run changes.
+
+</details>
+
+<details>
+<summary>lit-html: html, container, render</summary>
+<br>
+
+- **html**: a tag written in front of a backtick string, a *tagged template literal* (see the `view.js` walkthrough). It returns a description of the DOM and does not touch the page.
+- **container**: the element that `render` draws into, here `<div id="app-singleton">`, `<div id="app-factory">` or `<div id="app-class">`. The rest of the page is untouched.
+- **render**: writes that description into a container. On later calls it reuses the DOM it built and goes slot by slot (each `${…}`, walking into nested templates and arrays), updating only the slots whose value changed.
+
+</details>
+
+</dd></dl>
 
 </details>
 
@@ -199,7 +238,7 @@ import { html, render } from 'lit-html';
 const range = n => [...Array(n).keys()];
 ```
 
-- `const range = n => [...Array(n).keys()]` returns `[0, 1, …, n−1]`. `n => …` is an arrow function: an unnamed function, here taking `n` and returning the array. `Array(n)` makes an array of `n` empty places, `.keys()` walks its indexes, and `[...]` collects them into a new array. Example: `range(3)` is `[0, 1, 2]`.
+- `const range = n => [...Array(n).keys()]` returns `[0, 1, …, n−1]`. `n => …` is an arrow function (see [Terms](#terms)), here taking `n` and returning the array. `Array(n)` makes an array of `n` empty places, `.keys()` walks its indexes, and `[...]` collects them into a new array. Example: `range(3)` is `[0, 1, 2]`.
 
 ```js
 const template = m => html`
