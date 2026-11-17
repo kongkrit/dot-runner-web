@@ -54,10 +54,13 @@ The code is split the way an embedded C program often is: a model (state plus th
 </details>
 
 <details open>
-<summary>Browser: DOM, import map, arrow keys</summary>
+<summary>Browser: DOM, querySelector, activeElement, addEventListener, import map, arrow keys</summary>
 <br>
 
 - **DOM**: the tree of elements the browser builds from the HTML and draws on screen. JavaScript changes the page by changing this tree, and the browser redraws to match.
+- **querySelector** ([MDN](https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelector), [W3Schools](https://www.w3schools.com/jsref/met_document_queryselector.asp)): `document.querySelector(selector)` returns the first element in the page that matches a CSS selector, or `null` if none does. `'#app-singleton'` matches the element with `id="app-singleton"`. Called on an element instead of `document`, it searches only inside that element. It returns the live element, not a copy: reading its fields reads the page, and writing them changes it. Each `main.js` uses it to find its app's container.
+- **activeElement** ([MDN](https://developer.mozilla.org/en-US/docs/Web/API/Document/activeElement), [W3Schools](https://www.w3schools.com/jsref/prop_document_activeelement.asp)): `document.activeElement` is the element that has the keyboard focus, the one your key presses go to, such as the text box you are typing in. When nothing has it, it is `<body>`. Clicking into a text box, or pressing Tab, moves the focus. [STUDY_PLAN_1.md](STUDY_PLAN_1.md) uses it to leave a box alone while the user types in it.
+- **addEventListener** ([MDN](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener), [W3Schools](https://www.w3schools.com/jsref/met_element_addeventlistener.asp)): `target.addEventListener('keydown', fn)` asks the browser to call `fn` each time that event happens on `target`, an element or `window` for the whole page. The browser passes `fn` an event object, `e`, that describes what happened, such as `e.key` for a key press. Your code never polls; it waits to be called, like an interrupt handler. Each `main.js` uses it for key presses; the [`class/` walkthrough](#class) shows how a method passed this way loses `this`.
 - **import map**: a JSON block in the page that tells the browser which file a bare module name such as `lit-html` means. In an npm project a bundler does this job.
 - **ArrowUp, ArrowDown, ArrowLeft, ArrowRight**: the values the browser puts in a key event's `key` field when an arrow key is pressed. `controller.js` uses them as the keys of its `KEYMAP` table.
 
