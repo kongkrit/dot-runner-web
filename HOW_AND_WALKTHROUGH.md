@@ -91,7 +91,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 </details>
 
 <details open>
-<summary>Preact: signal, computed, effect</summary>
+<summary>Preact: signal, computed, effect, computed vs effect</summary>
 <br>
 
 Reference: the [signals-core 1.14.5 README](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#guide--api).
@@ -99,6 +99,11 @@ Reference: the [signals-core 1.14.5 README](https://github.com/preactjs/signals/
 - **signal**: a box holding one value. Code that reads `.value` inside a `computed` or `effect` is subscribed to it; writing a *different* value to `.value` notifies the subscribers. Writing the same value notifies nobody.
 - **computed**: a read-only signal whose value is a function of other signals. `model.js` hands out `computed` wrappers around `row` and `col`, so code outside the model can read them but not write them.
 - **effect**: a function that runs immediately, then again whenever a signal it read on its last run changes.
+- **computed vs effect**: a `computed` works out a value; an `effect` does something with it outside the signals, such as writing the page or logging.
+  - *When its function runs:* a computed's runs only when someone reads its `.value` and a signal it read has changed since its last run, so a computed that nothing reads never runs. An effect's runs once when it is created, then after every change to a signal it read, whether or not anything uses the result.
+  - *What it gives back:* a computed is itself a signal, whose value is what its function returns. `effect(fn)` returns a `dispose` function that stops the effect, and `fn` may return a *cleanup* function, which runs before each re-run and on dispose. This repo never disposes: its effects last as long as the page.
+  - *Filtering:* a computed that recomputes to the same value (`===`) notifies nobody. `computed(() => savings.value > 1000)` stays `true` as savings goes from 5000 to 6000, so an effect that reads only it doesn't re-run.
+  - *Rule of thumb:* if a value follows from signals, make it a computed, as `bondsText` in [STUDY_PLAN_1.md](STUDY_PLAN_1.md) is. Keep effects for the edge, where values leave the signals for the page, like the redraw effect in each `main.js`. Setting one signal from another inside an effect makes the second one lag: an effect that reads both can run once with the new first value and the old second one, then run again.
 
 </details>
 

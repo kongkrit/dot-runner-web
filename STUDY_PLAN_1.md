@@ -302,7 +302,7 @@ What changed from Build 0:
 
 **Read:**
 
-1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *computed*.
+1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *computed*, *computed vs effect*.
 2. The signals-core README: [`computed(fn)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#computedfn).
 
 **Code:** replace `.temp/money-app/main.js` with:
