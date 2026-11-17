@@ -6,9 +6,9 @@ New to reading and writing a web page from JavaScript? Do [STUDY_PLAN_1.md](STUD
 
 The goal: by the end you can build a small Preact Signals + lit-html app on your own. Each step has two parts: **read** the listed sections, in order (most are in [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md)), then **build** something small and see it run. The steps go: a hello world from a blank folder, built twice (lit-html alone, then with Preact Signals added), then one small feature added to the singleton, factory and class versions in turn, then an app of your own. The code comments name the C counterpart of each piece, if that helps.
 
-## Can I skip the factory?
+## You should read factory
 
-You can, but it costs more than it saves:
+Skipping it costs more than it saves:
 
 - The `class/` walkthrough explains only what differs from `factory/`.
 - The factory step is small: `git diff --no-index -w singleton factory` is 21 lines added and 10 removed.
@@ -32,6 +32,7 @@ mkdir -p .temp/hello-signals && cp -r vendor .temp/hello-signals/
 <head>
   <meta charset="utf-8">
   <title>Hello signals</title>
+  <style> :root { color-scheme: dark; } body { background: #333; color: #eee; } </style>
   <script type="importmap">
   { "imports": {
       "lit-html": "./vendor/lit-html.js",
@@ -46,7 +47,7 @@ mkdir -p .temp/hello-signals && cp -r vendor .temp/hello-signals/
 </html>
 ```
 
-The import map names both libraries from the start, so this file never changes. The browser fetches a module only when some code imports it, so Build 1 never loads Preact.
+The `<style>` line makes the page dark. `:root { color-scheme: dark; }` tells the browser to draw its own parts, such as the button, dark too (`:root` is the `<html>` element); without it form controls stay light. The `body` rule is the repo's: a dark gray background with light gray text ([Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml) explains the colors). The import map names both libraries from the start, so this file never changes. The browser fetches a module only when some code imports it, so Build 1 never loads Preact.
 
 ### Build 1: lit-html alone
 

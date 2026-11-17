@@ -1,16 +1,24 @@
 [README.md](README.md) · [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) · [STUDY_PLAN_2.md](STUDY_PLAN_2.md)
 
-# Study plan 1: one form, five builds
+# Study plan 1: one form, two tracks
 
-The goal: by the end you know how a web page reads what the user typed and writes results back, first by hand and then with lit-html and Preact Signals. You build one small form app five times, and each build adds one idea:
+The goal: by the end you know how a web page reads what the user typed and writes results back, first by hand and then with Preact Signals and lit-html. You build one small form app in plain DOM code (Build 0), then add four ideas, one per build:
 
-0. plain DOM code, no libraries;
-1. lit-html, which draws the whole page from one template;
-2. Preact Signals' `signal` and `effect`, which redraw the page by themselves;
-3. `computed`, for values worked out from other values;
-4. `batch`, for several changes that belong together.
+- Preact Signals' `signal` and `effect`, which redraw the page by themselves;
+- `computed`, for values worked out from other values;
+- `batch`, for several changes that belong together;
+- lit-html, which draws the whole page from one template.
 
-Each build has three parts: **read** the listed sections, in order; then copy the code, run it and read the notes under it; then **try** the things listed. You write no code in this plan: every build is printed in full. Afterwards, [STUDY_PLAN_2.md](STUDY_PLAN_2.md) takes the same tools into the dot runner and splits an app into model, view and controller.
+Two tracks add them in different orders. Both start from Build 0 and end at the same code:
+
+- **[Track 1](#track-1-signals-first), signals first:** signals, `computed`, `batch`, then lit-html. The page's markup stays in `index.html` until the last step, so each new idea lands in code you already know.
+- **[Track 2](#track-2-lit-html-first), lit-html first:** lit-html, then signals, `computed` and `batch`.
+
+Pick either. If you then do the other, it goes fast: you know every idea already, and only the order differs.
+
+Every build has the same three parts, in one file: a **model**, which holds the data and the rule that changes it; a **view**, which writes the page from the model; and a **controller**, which turns what the user does into model updates. Each build changes only what its new idea needs, so you can compare it with the one before.
+
+Each build has three steps: **read** the listed sections, in order; then copy the code, run it and read the notes under it; then **try** the things listed. You write no code in this plan: every build is printed in full. Afterwards, [STUDY_PLAN_2.md](STUDY_PLAN_2.md) takes the same tools into the dot runner, where the model, view and controller live in separate files.
 
 ## The app
 
@@ -21,7 +29,7 @@ Each build has three parts: **read** the listed sections, in order; then copy th
 - **Savings:** a number box that refuses negative numbers.
 - **Total:** "*name* has a total of *currency* *bonds × 1000 + savings*", for example "Ann has a total of EUR 98765".
 
-The app's state is four values: `userName`, `currency`, `bonds` and `savings`. Everything else on screen is worked out from them.
+The app's state is four values, `userName`, `currency`, `bonds` and `savings`, held in one `model` object. Everything else on screen is worked out from them.
 
 ## Setup
 
@@ -31,7 +39,7 @@ From the repo root:
 mkdir -p .temp/money-app && cp -r vendor .temp/money-app/
 ```
 
-`.temp/` is scratch space inside the repo: git ignores everything in it except its `.placeholder` file, and the boundary check skips it, so your builds are neither committed nor checked. Build 0 uses no library; Builds 1–4 load lit-html and Preact Signals from that copy of `vendor/`. To run any build, from the repo root:
+`.temp/` is scratch space inside the repo: git ignores everything in it except its `.placeholder` file, and the boundary check skips it, so your builds are neither committed nor checked. Build 0 uses no library; the later builds load Preact Signals and lit-html from that copy of `vendor/`. To run any build, from the repo root:
 
 ```bash
 cd .temp/money-app && uv run --no-project python -m http.server 8001
@@ -44,8 +52,8 @@ Then open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo. Afte
 **Read:**
 
 1. The README introduction and [Run](README.md#run): why the page needs a server.
-2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *semantic HTML*, *=> (arrow function)*.
-3. [Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml): tags, attributes and the module script. Skip the import map and the CSS; this build has neither.
+2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *semantic HTML*, *output*, *=> (arrow function)*.
+3. [Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml): tags, attributes and the module script. Skip the import map (this build has none) and all the CSS except the `body` rule, which this build reuses.
 
 **Code:** `.temp/money-app/index.html`:
 
@@ -55,6 +63,7 @@ Then open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo. Afte
 <head>
   <meta charset="utf-8">
   <title>Money</title>
+  <style> :root { color-scheme: dark; } body { background: #333; color: #eee; } </style>
 </head>
 <body>
   <p><label>Your name: <input id="name"></label></p>
@@ -76,54 +85,65 @@ Then open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo. Afte
 - `<input id="name">`: an `<input>` with no `type` is a one-line text box. Wrapping it in a `<label>` with its text ties the two together: clicking "Your name:" puts the cursor in the box, and screen readers read the text as the box's name.
 - `<select>` is the dropdown list and each `<option>` is one choice. An option with no `value` attribute uses its text as its value, so picking EUR gives `"EUR"`. The first option starts out selected.
 - `<input type="number">` is a box for a number; the browser adds small up and down arrows to it. `<button>` is a button, and `<output>` is the element for a computed result, here empty until `main.js` fills it.
-- `id="…"` gives each element a name that is unique in the page, so `main.js` can find it. There is no `<style>`, so everything has the browser's default look.
+- `id="…"` gives each element a name that is unique in the page, so `main.js` can find it.
+- `<style> :root { color-scheme: dark; } body { background: #333; color: #eee; } </style>` makes the whole page dark. `<style>` holds CSS rules, and this line has two:
+  - `:root { color-scheme: dark; }` tells the browser the page is meant to be dark (`:root` is the `<html>` element), so it draws its own parts dark too: the text boxes, the dropdown, the buttons and the scrollbars. Without it they stay light, because form controls don't take on the page's colors.
+  - `body { background: #333; color: #eee; }` is the repo's `index.html` rule: a dark gray background and light gray text. Colors are hex RGB, and three digits are short for six: `#333` is `#333333`, so red, green and blue are each 0x33 = 51 out of 255.
 - `<script type="module">` runs `main.js` after the whole page has been parsed, so every element exists by then.
 
 `.temp/money-app/main.js`:
 
 ```js
+// DOM inputs
 const nameBox = document.querySelector('#name');
 const currencyBox = document.querySelector('#currency');
 const addBondButton = document.querySelector('#add-bond');
 const richButton = document.querySelector('#rich');
 const poorButton = document.querySelector('#poor');
 const savingsBox = document.querySelector('#savings');
+
+// DOM outputs
 const bondsOut = document.querySelector('#bonds');
 const totalOut = document.querySelector('#total');
 
-let userName = '', currency = 'USD', bonds = 0, savings = 0;
+// Model state
+const model = { userName: '', currency: 'USD', bonds: 0, savings: 0 };
 
-function draw() {
-  bondsOut.textContent = `we have ${bonds} thousand${bonds === 1 ? '' : 's'} in bonds`;
-  totalOut.textContent = `${userName} has a total of ${currency} ${bonds * 1000 + savings}`;
+// Update model: a field missing from the argument defaults to the model's current value, so it stays the same
+function updateModel({ userName = model.userName, currency = model.currency,
+                       bonds = model.bonds, savings = model.savings }) {
+  model.userName = userName;
+  model.currency = currency;
+  model.bonds    = bonds;
+  if (savings >= 0) model.savings = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
 }
 
-function setMoney(b, s) {
-  bonds = b;
-  savings = s;
-  savingsBox.value = s;
-  draw();
+// Update View
+function updateView() {
+  // Write the box only if it shows another number: rewriting "1." as "1" would break typing 1.5.
+  // A rejected entry (a minus, an empty box) reads as NaN, so this also puts the last valid number back.
+  if (savingsBox.valueAsNumber !== model.savings) savingsBox.value = model.savings;
+  bondsOut.textContent = `we have ${model.bonds} thousand${model.bonds === 1 ? '' : 's'} in bonds`;
+  totalOut.textContent = `${model.userName} has a total of ${model.currency} ${model.bonds * 1000 + model.savings}`;
 }
 
-nameBox.addEventListener('input', () => { userName = nameBox.value; draw(); });
-currencyBox.addEventListener('change', () => { currency = currencyBox.value; draw(); });
-addBondButton.addEventListener('click', () => { bonds++; draw(); });
-richButton.addEventListener('click', () => setMoney(98, 765));
-poorButton.addEventListener('click', () => setMoney(0, 123));
-savingsBox.addEventListener('input', () => {
-  const n = savingsBox.valueAsNumber;   // NaN when the box holds no number
-  if (n >= 0) savings = n;              // NaN >= 0 is false, so this rejects NaN too
-  else savingsBox.value = savings;      // rejected: put the last valid number back
-  draw();
-});
+// Controller Wiring for inputs
+nameBox.addEventListener('input',       () => { updateModel({ userName: nameBox.value });           updateView(); });
+currencyBox.addEventListener('change',  () => { updateModel({ currency: currencyBox.value });       updateView(); });
+addBondButton.addEventListener('click', () => { updateModel({ bonds: model.bonds + 1 });            updateView(); });
+richButton.addEventListener('click',    () => { updateModel({ bonds: 98, savings: 765 });           updateView(); });
+poorButton.addEventListener('click',    () => { updateModel({ bonds: 0, savings: 123 });            updateView(); });
+savingsBox.addEventListener('input',    () => { updateModel({ savings: savingsBox.valueAsNumber }); updateView(); });
 
-savingsBox.value = savings;
-draw();
+updateView();
 ```
 
-- `document.querySelector('#name')` returns the first element that matches the CSS selector `#name`: the element with `id="name"`. Each `const` holds a reference to the live element, not a copy, much like a pointer to a memory-mapped register: reading its `value` gives what the box shows now, and writing it changes the page. Where the analogy breaks down: the screen shows the change only after your code returns, not at the moment of the write.
-- `let userName = '', currency = 'USD', bonds = 0, savings = 0` declares the four state values on one line, as `int a = 0, b = 0;` does in C. They match how the page starts: an empty name box, and USD, the first option. It is `userName`, not `name`, because browsers already have a global `name` (`window.name`, the tab's name), which VS Code marks as deprecated wherever a plain `name` looks like it.
-- `` `we have ${bonds} thousand…` `` is a template literal: a string in backticks, where `${expr}` inserts the value of any expression. `bonds === 1 ? '' : 's'` adds the "s" except when bonds is 1. `===` is equality without type conversion, and `? :` works as in C.
+- **DOM inputs and outputs:** `document.querySelector('#name')` returns the first element that matches the CSS selector `#name`: the element with `id="name"`. Each `const` holds a reference to the live element, not a copy, much like a pointer to a memory-mapped register: reading its `value` gives what the box shows now, and writing it changes the page. Where the analogy breaks down: the screen shows the change only after your code returns, not at the moment of the write.
+- **Model state:** `{ userName: '', currency: 'USD', … }` is an object literal, a table of named fields, like a C struct filled in one line. `model` is `const` because it always names this one object; its fields still change. The fields match how the page starts: an empty name box, and USD, the first option. It is `userName`, not `name`, because browsers already have a global `name` (`window.name`, the tab's name), which VS Code marks as deprecated wherever a plain `name` looks like it.
+- **Update model:** `updateModel` is the only code that writes the model, much like `model_update()` in the C original. It takes one object, such as `{ bonds: 98, savings: 765 }`, and its parameter list *destructures* it: `{ userName = model.userName, … }` copies each field into a local variable of the same name ([MDN: destructuring](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring#default_value)). A field the object doesn't have, or has as `undefined`, takes its default instead, here the model's current value, read at the moment of the call. So `updateModel({ bonds: 98, savings: 765 })` sets those two fields and writes the other two back unchanged.
+- **The savings rule:** `if (savings >= 0)` keeps a new savings value only when it is 0 or more. Because the rule sits in the model, no caller can store a negative number, whichever handler it comes from.
+- **Update View:** `updateView` writes the page from the model; [Writing the DOM](#writing-the-dom) below explains each line. `` `we have ${model.bonds} thousand…` `` is a template literal: a string in backticks, where `${expr}` inserts the value of any expression. `model.bonds === 1 ? '' : 's'` adds the "s" except when bonds is 1. `===` is equality without type conversion, and `? :` works as in C.
+- **Controller wiring:** each listener does the same two steps: tell the model what the user did, with `updateModel`, then redraw, with `updateView()`. The last line draws the first frame, which also puts the starting 0 into the savings box.
 
 ### Reading the DOM
 
@@ -132,34 +152,42 @@ Reading means two things: getting a value out of an element, and learning when i
 - **`userName`:** `nameBox.value` is the text in the box, always a string. The `input` event fires on every change to that text (each key press, paste or delete), so the total follows as you type. The `change` event would fire only when you leave the box.
 - **`currency`:** `currencyBox.value` is the value of the chosen option. A `<select>` fires `change` as soon as a new option is picked.
 - **The `+1`, `rich` and `poor` buttons:** a button has no value to read. You read it by listening for `click`, which fires for a mouse click, and also for Enter or Space while the button has keyboard focus.
-- **`savings`:** `savingsBox.value` is a string here too, even in a number box: `"12"`, not `12`. Adding a string to a number joins them as text, so `98000 + "12"` is `"9800012"`. `savingsBox.valueAsNumber` gives the number `12` instead, or `NaN` ("not a number") when the box holds no valid number, as when it is empty or holds only a `-`. The handler keeps `n` only when `n >= 0`. That one test rejects both negative numbers and `NaN`, because every `<`, `>`, `<=` or `>=` comparison with `NaN` is false.
+- **`savings`:** `savingsBox.value` is a string here too, even in a number box: `"12"`, not `12`. Adding a string to a number joins them as text, so `98000 + "12"` is `"9800012"`. `savingsBox.valueAsNumber` gives the number `12` instead, or `NaN` ("not a number") when the box holds no valid number, as when it is empty or holds only a `-`. The model's `savings >= 0` test rejects both negative numbers and `NaN`, because every `<`, `>`, `<=` or `>=` comparison with `NaN` is false.
 
 ### Writing the DOM
 
-- **"we have N thousand(s) in bonds" and the total:** `element.textContent = text` replaces everything inside the element with that text. `draw()` writes both `<output>`s from the four state values, and every handler calls it after a change.
+- **"we have N thousand(s) in bonds" and the total:** `element.textContent = text` replaces everything inside the element with that text. `updateView` writes both `<output>`s from the model.
 - **`textContent`, not `innerHTML`:** `innerHTML = text` would parse the text as HTML. The name is whatever the user typed: as HTML, `<b>Bo</b>` would show in bold, and a name such as `<img src=x onerror=alert(1)>` would run code. `textContent` shows it exactly as typed.
-- **The savings box is written too,** so it is on both sides. `setMoney` writes `savingsBox.value = s` for `rich` and `poor`, and the input handler writes it to put back the last valid number after a rejected one. Writing `.value` changes what the box shows and fires no `input` event, which reports only the user's own changes, so writing the box never calls the handler again.
-- The last two lines put the starting savings into the box and draw the first frame.
+- **The savings box is written too,** so it is on both sides. Writing `.value` replaces the box's text and moves the cursor, so `updateView` writes it only when the number the box shows differs from the model's:
+  - while you type a valid number, the box already shows the model's number, so nothing is written. Writing anyway would fight your typing: at `1.` the box reads 1, and a write would turn `1.` into `1`, so typing `1.5` would end as `51`;
+  - after `rich` or `poor`, the model holds a new number, so the box is rewritten;
+  - after a rejected entry, a `-` or an emptied box, the box reads `NaN`, which differs from every number, so the last valid number is put back.
 
-The pattern: the state lives in four variables, and the page holds a copy that the code keeps in step by hand. Every handler reads a value, updates a variable and calls `draw()`. Forget `draw()` in one handler and that part of the screen goes stale, with no error. The writes are also spread out: `draw()` writes the outputs, and `setMoney` and the input handler write the savings box. Build 1 puts the page's writes in one template, and Build 2 removes the `draw()` calls.
+  Writing `.value` fires no `input` event, which reports only the user's own changes, so writing the box never calls its handler.
+
+The pattern: every user action runs the same loop, controller → `updateModel` → `updateView()`. The state lives only in `model`; the page is a copy that `updateView` refreshes. Two costs remain. Every handler must remember `updateView()`: forget it in one, and that part of the screen goes stale with no error. And `updateView` rewrites both outputs each time, changed or not. Signals remove the `updateView()` calls (Builds 1.1 and 2.2), and lit-html draws the page from one template that writes only what changed (Builds 1.4 and 2.1).
 
 **Try it:**
 
 - Type a name: the total follows each key press.
 - Click `+1` once: "we have 1 thousand in bonds". Click it again: "2 thousands".
 - Click `rich`: the box shows 765 and the total ends in 98765. Click `poor`: 123.
-- In the savings box, select the number and type `-`: the number comes back at once. Delete the digits one by one: the last one stays, because an empty box holds no number either. To enter a new number, select the old one and type over it.
+- In the savings box, type `1.5`: it stays as typed, and the total ends in 1.5.
+- Select the number and type `-`: the number comes back at once. Delete the digits one by one: the last one stays, because an empty box holds no number either. To enter a new number, select the old one and type over it.
 - Type `<b>Bo</b>` as your name: the total shows it as typed, not in bold.
 
-## Build 1: lit-html
+## Track 1: signals first
+
+Signals go into Build 0's plain DOM code, and lit-html comes last. The form stays in `index.html` until Build 1.4.
+
+### Build 1.1: signal and effect
 
 **Read:**
 
-1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *import map*, *html*, *container*, *render*.
-2. [Code walkthrough → `singleton/`](HOW_AND_WALKTHROUGH.md#singleton) → `view.js`: the notes on `` html`…` `` and `render`. Skip the grid details.
-3. lit.dev [Expressions](https://lit.dev/docs/templates/expressions/): [child](https://lit.dev/docs/templates/expressions/#child-expressions), [property](https://lit.dev/docs/templates/expressions/#property-expressions) and [event listener](https://lit.dev/docs/templates/expressions/#event-listener-expressions) expressions. lit.dev writes its examples inside Lit components, with `this.` in front of each value; here the values are plain variables.
+1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *import map*, *signal*, *effect*.
+2. The signals-core README: [`signal(initialValue)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#signalinitialvalue) and [`effect(fn)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#effectfn), the first example of each.
 
-**Code:** replace `.temp/money-app/index.html` with this shell, which stays the same through Build 4:
+**Code:** replace `.temp/money-app/index.html` with this, which stays the same through Build 1.3:
 
 ```html
 <!doctype html>
@@ -167,6 +195,410 @@ The pattern: the state lives in four variables, and the page holds a copy that t
 <head>
   <meta charset="utf-8">
   <title>Money</title>
+  <style> :root { color-scheme: dark; } body { background: #333; color: #eee; } </style>
+  <script type="importmap">
+  { "imports": {
+      "lit-html": "./vendor/lit-html.js",
+      "@preact/signals-core": "./vendor/signals-core.mjs"
+  } }
+  </script>
+</head>
+<body>
+  <p><label>Your name: <input id="name"></label></p>
+  <p><label>Currency:
+    <select id="currency">
+      <option>USD</option>
+      <option>EUR</option>
+      <option>SGD</option>
+    </select></label></p>
+  <p><button id="add-bond">+1</button> <output id="bonds"></output></p>
+  <p><button id="rich">rich</button> <button id="poor">poor</button></p>
+  <p><label>Savings: <input id="savings" type="number"></label></p>
+  <p>Total: <output id="total"></output></p>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
+```
+
+Replace `.temp/money-app/main.js` with:
+
+```js
+import { signal, effect } from '@preact/signals-core';
+
+// DOM inputs
+const nameBox = document.querySelector('#name');
+const currencyBox = document.querySelector('#currency');
+const addBondButton = document.querySelector('#add-bond');
+const richButton = document.querySelector('#rich');
+const poorButton = document.querySelector('#poor');
+const savingsBox = document.querySelector('#savings');
+
+// DOM outputs
+const bondsOut = document.querySelector('#bonds');
+const totalOut = document.querySelector('#total');
+
+// Model state: each field is a signal
+const model = { userName: signal(''), currency: signal('USD'), bonds: signal(0), savings: signal(0) };
+
+// Update model: a field missing from the argument defaults to the model's current value, so it stays the same
+function updateModel({ userName = model.userName.value, currency = model.currency.value,
+                       bonds = model.bonds.value, savings = model.savings.value }) {
+  model.userName.value = userName;
+  model.currency.value = currency;
+  model.bonds.value    = bonds;
+  if (savings >= 0) model.savings.value = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
+}
+
+// Update View
+function updateView() {
+  savingsBox.value = model.savings.value;
+  bondsOut.textContent = `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
+  totalOut.textContent = `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`;
+}
+
+// Controller Wiring for inputs
+nameBox.addEventListener('input',       () => updateModel({ userName: nameBox.value }));
+currencyBox.addEventListener('change',  () => updateModel({ currency: currencyBox.value }));
+addBondButton.addEventListener('click', () => updateModel({ bonds: model.bonds.value + 1 }));
+richButton.addEventListener('click',    () => updateModel({ bonds: 98, savings: 765 }));
+poorButton.addEventListener('click',    () => updateModel({ bonds: 0, savings: 123 }));
+savingsBox.addEventListener('input',    () => {
+  updateModel({ savings: savingsBox.valueAsNumber });
+  // Rejected (a minus, an empty box): no signal changed, so no redraw runs. Put it back here.
+  if (savingsBox.valueAsNumber !== model.savings.value) savingsBox.value = model.savings.value;
+});
+
+effect(() => {
+  console.log('render');
+  updateView();
+});
+```
+
+- `index.html` gained an import map (see Terms): it tells the browser that `@preact/signals-core` means `./vendor/signals-core.mjs`. It already names lit-html too, for Build 1.4; the browser fetches a library only when some code imports it, so lit-html isn't loaded yet. The form stays where it was.
+- `signal('')` makes a box holding one value, and `.value` reads or writes it. Each of the model's four fields is now a signal, so `model.bonds` is the box and `model.bonds.value` the number in it.
+- `updateModel` keeps its shape; its reads and writes now go through `.value`. It writes every field on every call, changed or not (savings only when valid), but writing a signal the value it already holds notifies nobody, so only the fields that really changed cause a redraw.
+- `effect(fn)` runs `fn` once, now, and again each time a signal that `fn` read on its last run changes. Here it runs `updateView`, which reads all four signals, so a change to any of them redraws the page. `console.log('render')` prints a line in the console on each run.
+- The handlers now only update the model: their `updateView()` calls are gone, and so is the startup call, because the effect's first run draws the first frame. `() => updateModel({ … })` is an arrow function whose body is one expression, so it needs no braces.
+- The redraw happens inside the write: `model.bonds.value = 98` returns only after the effect has run and the page is updated. The README says so: "Changing a signal's value synchronously updates every computed and effect that depends on that signal".
+- **The savings box changed in two places.** Build 0's `updateView` compared before writing the box, because it ran on every key press, even when the model didn't change: at `1.` a write would have turned the text into `1`. The effect runs only when a signal really changed, so `updateView` now writes the box plainly: at `1.` the model still holds 1, nothing changed, and nothing runs. For the same reason, a rejected entry (a minus, an empty box) changes no signal and runs nothing, so the put-back moved into the savings handler. It is the same comparison Build 0's `updateView` made.
+
+What changed from Build 0:
+
+1. `index.html` gained the import map, and `main.js` imports `signal` and `effect`.
+2. The model's fields became `signal`s, and every read and write goes through `.value`.
+3. The `updateView()` calls are gone; one `effect` at the end runs `updateView` and logs `render`.
+4. `updateView` writes the savings box plainly, and the savings handler puts back a rejected entry.
+
+**Try it,** with the console open:
+
+- Type `Ann`: three `render`s, one per key press.
+- Click `+1`: one `render`.
+- Click `rich`: **two** `render`s, one after `model.bonds.value = 98` and one after `model.savings.value = 765`. The writes to `userName` and `currency` store the values already there, so they cause none. In between, the page held bonds 98 with the old savings, for an instant. Build 1.3 removes that.
+- Click `rich` again: no `render`. Every write stores the value that is already there.
+- In the savings box, type `1.5`: it stays as typed. Select it and type `-`: no `render`, and the number comes back.
+
+### Build 1.2: computed
+
+**Read:**
+
+1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *computed*.
+2. The signals-core README: [`computed(fn)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#computedfn).
+
+**Code:** replace `.temp/money-app/main.js` with:
+
+```js
+import { signal, computed, effect } from '@preact/signals-core';
+
+// DOM inputs
+const nameBox = document.querySelector('#name');
+const currencyBox = document.querySelector('#currency');
+const addBondButton = document.querySelector('#add-bond');
+const richButton = document.querySelector('#rich');
+const poorButton = document.querySelector('#poor');
+const savingsBox = document.querySelector('#savings');
+
+// DOM outputs
+const bondsOut = document.querySelector('#bonds');
+const totalOut = document.querySelector('#total');
+
+// Model state: each field is a signal
+const model = { userName: signal(''), currency: signal('USD'), bonds: signal(0), savings: signal(0) };
+
+// Update model: a field missing from the argument defaults to the model's current value, so it stays the same
+function updateModel({ userName = model.userName.value, currency = model.currency.value,
+                       bonds = model.bonds.value, savings = model.savings.value }) {
+  model.userName.value = userName;
+  model.currency.value = currency;
+  model.bonds.value    = bonds;
+  if (savings >= 0) model.savings.value = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
+}
+
+// Derived values
+const bondsText = computed(() => {
+  console.log('bondsText');
+  return `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
+});
+const totalText = computed(() => `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`);
+
+// Update View
+function updateView() {
+  savingsBox.value = model.savings.value;
+  bondsOut.textContent = bondsText.value;
+  totalOut.textContent = totalText.value;
+}
+
+// Controller Wiring for inputs
+nameBox.addEventListener('input',       () => updateModel({ userName: nameBox.value }));
+currencyBox.addEventListener('change',  () => updateModel({ currency: currencyBox.value }));
+addBondButton.addEventListener('click', () => updateModel({ bonds: model.bonds.value + 1 }));
+richButton.addEventListener('click',    () => updateModel({ bonds: 98, savings: 765 }));
+poorButton.addEventListener('click',    () => updateModel({ bonds: 0, savings: 123 }));
+savingsBox.addEventListener('input',    () => {
+  updateModel({ savings: savingsBox.valueAsNumber });
+  // Rejected (a minus, an empty box): no signal changed, so no redraw runs. Put it back here.
+  if (savingsBox.valueAsNumber !== model.savings.value) savingsBox.value = model.savings.value;
+});
+
+effect(() => {
+  console.log('render');
+  updateView();
+});
+```
+
+- `computed(fn)` makes a read-only signal whose value is `fn`'s result. It runs `fn` again only when one of the signals `fn` read has changed, and only when someone reads its `.value`; otherwise `.value` returns the stored result. `bondsText` and `totalText` hold the two sentences that `updateView` used to build. They sit with the model, because they are worked out from its data.
+- `updateView`'s two `textContent` lines now read `bondsText.value` and `totalText.value`. The effect is subscribed to the two computeds, and through them to the signals they read.
+- `bondsText` logs each time it recalculates. With a second statement, its arrow function needs braces and a `return` (see *=> (arrow function)* in Terms).
+- What `computed` gives you:
+  - each derived value has a name and one definition, outside the view, and any code can read it;
+  - it is cached: typing a name re-runs the effect, but `bondsText` is not recalculated, because `bonds` didn't change;
+  - it is read-only: `bondsText.value = 'x'` throws a `TypeError`.
+
+  At this size the caching saves nothing you could measure. It pays off when a derived value is costly to work out, such as a long sorted list, or is read in several places, since it is then worked out once and shared.
+
+What changed from Build 1.1:
+
+1. `computed` joined the import.
+2. Two computeds hold the two sentences.
+3. `updateView`'s two `textContent` lines read them.
+
+**Try it,** with the console open:
+
+- Type a name: one `render` per key press, and no `bondsText`.
+- Click `+1`: `bondsText`, then `render`. Before it re-runs an effect, Preact Signals recalculates the computeds the effect read, to check that something really changed, so the computed logs first.
+- Click `rich`: `bondsText`, `render`, `render`. The second run comes from the `savings` write, and `bondsText` doesn't recalculate for it: `bonds` hasn't changed since the first run.
+
+### Build 1.3: batch
+
+**Read:** the signals-core README: [`batch(fn)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#batchfn), its first example.
+
+**Code:** replace `.temp/money-app/main.js` with:
+
+```js
+import { signal, computed, effect, batch } from '@preact/signals-core';
+
+// DOM inputs
+const nameBox = document.querySelector('#name');
+const currencyBox = document.querySelector('#currency');
+const addBondButton = document.querySelector('#add-bond');
+const richButton = document.querySelector('#rich');
+const poorButton = document.querySelector('#poor');
+const savingsBox = document.querySelector('#savings');
+
+// DOM outputs
+const bondsOut = document.querySelector('#bonds');
+const totalOut = document.querySelector('#total');
+
+// Model state: each field is a signal
+const model = { userName: signal(''), currency: signal('USD'), bonds: signal(0), savings: signal(0) };
+
+// Update model: a field missing from the argument defaults to the model's current value, so it stays the same
+function updateModel({ userName = model.userName.value, currency = model.currency.value,
+                       bonds = model.bonds.value, savings = model.savings.value }) {
+  batch(() => {
+    model.userName.value = userName;
+    model.currency.value = currency;
+    model.bonds.value    = bonds;
+    if (savings >= 0) model.savings.value = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
+  });
+}
+
+// Derived values
+const bondsText = computed(() => {
+  console.log('bondsText');
+  return `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
+});
+const totalText = computed(() => `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`);
+
+// Update View
+function updateView() {
+  savingsBox.value = model.savings.value;
+  bondsOut.textContent = bondsText.value;
+  totalOut.textContent = totalText.value;
+}
+
+// Controller Wiring for inputs
+nameBox.addEventListener('input',       () => updateModel({ userName: nameBox.value }));
+currencyBox.addEventListener('change',  () => updateModel({ currency: currencyBox.value }));
+addBondButton.addEventListener('click', () => updateModel({ bonds: model.bonds.value + 1 }));
+richButton.addEventListener('click',    () => updateModel({ bonds: 98, savings: 765 }));
+poorButton.addEventListener('click',    () => updateModel({ bonds: 0, savings: 123 }));
+savingsBox.addEventListener('input',    () => {
+  updateModel({ savings: savingsBox.valueAsNumber });
+  // Rejected (a minus, an empty box): no signal changed, so no redraw runs. Put it back here.
+  if (savingsBox.valueAsNumber !== model.savings.value) savingsBox.value = model.savings.value;
+});
+
+effect(() => {
+  console.log('render');
+  updateView();
+});
+```
+
+- `batch(fn)` runs `fn` and holds back every effect until `fn` returns; then each effect whose signals changed runs once. `updateModel` is the only code that writes the model, so one `batch` there covers every action: `rich`, `poor`, and any later one that changes several fields at once. An update that changes one field runs the effect once, as before.
+- On screen nothing changes from Build 1.2. The browser runs JavaScript and paints the page on the same thread, and it paints only after the click handler has returned, so Build 1.2's half-updated page was never shown. What `batch` removes is the wasted run, and the moment in which the effect saw bonds 98 with the old savings.
+- That moment matters once an effect does more than draw. An effect that logs the total, saves it, or sends it over the network would do so twice per click, once with a wrong total.
+
+What changed from Build 1.2: `batch` joined the import, and `updateModel` wraps its writes in `batch(() => { … })`.
+
+**Try it:**
+
+- Click `rich`, then `poor`: each logs one `render` and one `bondsText`.
+- Open F12 → Elements, expand the page, and type a name. Chrome briefly highlights each part of the page it changes, and both outputs flash: `updateView` rewrites the bonds sentence too, although it didn't change. Build 1.4 fixes that.
+
+### Build 1.4: lit-html
+
+**Read:**
+
+1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *html*, *container*, *render*.
+2. [Code walkthrough → `singleton/`](HOW_AND_WALKTHROUGH.md#singleton) → `view.js`: the notes on `` html`…` `` and `render`. Skip the grid details.
+3. lit.dev [Expressions](https://lit.dev/docs/templates/expressions/): [child](https://lit.dev/docs/templates/expressions/#child-expressions), [property](https://lit.dev/docs/templates/expressions/#property-expressions) and [event listener](https://lit.dev/docs/templates/expressions/#event-listener-expressions) expressions. lit.dev writes its examples inside Lit components, with `this.` in front of each value; here the values are plain variables.
+
+**Code:** replace `.temp/money-app/index.html` with this shell:
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Money</title>
+  <style> :root { color-scheme: dark; } body { background: #333; color: #eee; } </style>
+  <script type="importmap">
+  { "imports": {
+      "lit-html": "./vendor/lit-html.js",
+      "@preact/signals-core": "./vendor/signals-core.mjs"
+  } }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
+```
+
+Replace `.temp/money-app/main.js` with:
+
+```js
+import { signal, computed, effect, batch } from '@preact/signals-core';
+import { html, render } from 'lit-html';
+
+// Model state: each field is a signal
+const model = { userName: signal(''), currency: signal('USD'), bonds: signal(0), savings: signal(0) };
+
+// Update model: a field missing from the argument defaults to the model's current value, so it stays the same
+function updateModel({ userName = model.userName.value, currency = model.currency.value,
+                       bonds = model.bonds.value, savings = model.savings.value }) {
+  batch(() => {
+    model.userName.value = userName;
+    model.currency.value = currency;
+    model.bonds.value    = bonds;
+    if (savings >= 0) model.savings.value = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
+  });
+}
+
+// Derived values
+const bondsText = computed(() => {
+  console.log('bondsText');
+  return `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
+});
+const totalText = computed(() => `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`);
+
+// Update View
+const template = () => html`
+  <p><label>Your name: <input @input=${onName}></label></p>
+  <p><label>Currency:
+    <select @change=${onCurrency}>
+      <option>USD</option>
+      <option>EUR</option>
+      <option>SGD</option>
+    </select></label></p>
+  <p><button @click=${onAddBond}>+1</button>
+    <output>${bondsText.value}</output></p>
+  <p><button @click=${onRich}>rich</button>
+    <button @click=${onPoor}>poor</button></p>
+  <p><label>Savings: <input type="number" .value=${model.savings.value} @input=${onSavings}></label></p>
+  <p>Total: <output>${totalText.value}</output></p>`;
+
+// Controller: the template's @ slots attach these
+function onName(e)     { updateModel({ userName: e.target.value }); }
+function onCurrency(e) { updateModel({ currency: e.target.value }); }
+function onAddBond()   { updateModel({ bonds: model.bonds.value + 1 }); }
+function onRich()      { updateModel({ bonds: 98, savings: 765 }); }
+function onPoor()      { updateModel({ bonds: 0, savings: 123 }); }
+function onSavings(e) {
+  updateModel({ savings: e.target.valueAsNumber });
+  // Rejected (a minus, an empty box): no signal changed, so no redraw runs. Put it back here.
+  if (e.target.valueAsNumber !== model.savings.value) e.target.value = model.savings.value;
+}
+
+effect(() => {
+  console.log('render');
+  render(template(), document.querySelector('#app'));
+});
+```
+
+This is the final build: Track 2 ends with exactly this `main.js`.
+
+- `index.html` lost the form and keeps only the `<style>` line, the import map and an empty `<div id="app">`, the container.
+- `template` holds the same markup the form had, inside `` html`…` ``: a template literal with the tag `html` in front. It describes the page and changes nothing. Each `${…}` is a slot that lit-html fills, and three kinds appear here:
+  - **Child slot,** between tags, as in `<output>${bondsText.value}</output>`: the value becomes text. lit-html always inserts it as text, never as HTML, so a slot is as safe as `textContent`.
+  - **Event slot,** `@input=${onName}`: lit-html calls `addEventListener('input', onName)` on that element for you. Event slots replace the `addEventListener` lines, and with them the `querySelector` lines and the `id`s.
+  - **Property slot,** `.value=${model.savings.value}`: sets the box's `value` property, as `savingsBox.value = model.savings.value` did. The dot matters. Without it, `value=${…}` would set the `value` *attribute*, which only supplies the box's starting value: once the user has typed, changing the attribute no longer changes what the box shows.
+- Only the savings box has a `.value` slot, because only its value is ever changed by code (by `rich` and `poor`). The name box and the currency list only report what the user did.
+- `updateView` is gone: the effect calls `render(template(), …)` directly. `render` compares each slot with its value from the last call and touches only the slots that changed, so typing a name now changes only the total's text, where Build 1.3 rewrote both outputs.
+- **Controller:** the `addEventListener` lines became named functions, which the template's `@` slots attach. `e.target` is the element the event happened on: no variable holds the elements any more, so each handler gets its element from the event `e`. The template names the handlers before they are defined; that works because a `function` declaration exists from the start of the file, and the effect at the end is the first code to run them.
+- The put-back stays in `onSavings`, now through `e.target`. `render` couldn't do it anyway: it compares each slot with what lit-html last wrote, not with what the box shows.
+- **What lit-html adds, honestly.** For a fixed form like this one, the template mostly moves the markup from `index.html` into JavaScript, and signals already redraw only after a real change. What you gain is one place that describes the page, and `@` and `.value` slots instead of `querySelector` and `addEventListener` lines. It pays off once the markup changes shape with the data: a list drawn with `.map` (as the dot runner's grid is), or a part shown or hidden with `? :`. Writing those by hand means creating, moving and deleting elements yourself.
+
+What changed from Build 1.3:
+
+1. The form moved from `index.html` into `template`, and the `querySelector` lines are gone.
+2. `updateView` became `template`, and the effect calls `render`.
+3. The `addEventListener` lines became named handlers that `@` slots attach, and the handlers get their element from `e.target`.
+
+**Try it:** everything behaves as in Build 1.3, and the console shows the same lines. In F12 → Elements, typing a name now flashes only the total's text.
+
+## Track 2: lit-html first
+
+lit-html comes first, then signals. Start from [Build 0](#build-0-plain-dom); this track ends at the same `main.js` as [Build 1.4](#build-14-lit-html).
+
+### Build 2.1: lit-html
+
+**Read:**
+
+1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *import map*, *html*, *container*, *render*.
+2. [Code walkthrough → `singleton/`](HOW_AND_WALKTHROUGH.md#singleton) → `view.js`: the notes on `` html`…` `` and `render`. Skip the grid details.
+3. lit.dev [Expressions](https://lit.dev/docs/templates/expressions/): [child](https://lit.dev/docs/templates/expressions/#child-expressions), [property](https://lit.dev/docs/templates/expressions/#property-expressions) and [event listener](https://lit.dev/docs/templates/expressions/#event-listener-expressions) expressions. lit.dev writes its examples inside Lit components, with `this.` in front of each value; here the values are plain variables.
+
+**Code:** replace `.temp/money-app/index.html` with this shell, which stays the same through Build 2.4:
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Money</title>
+  <style> :root { color-scheme: dark; } body { background: #333; color: #eee; } </style>
   <script type="importmap">
   { "imports": {
       "lit-html": "./vendor/lit-html.js",
@@ -186,62 +618,76 @@ Replace `.temp/money-app/main.js` with:
 ```js
 import { html, render } from 'lit-html';
 
-let userName = '', currency = 'USD', bonds = 0, savings = 0;
+// Model state
+const model = { userName: '', currency: 'USD', bonds: 0, savings: 0 };
 
-function setMoney(b, s) {
-  bonds = b;
-  savings = s;
-  draw();
+// Update model: a field missing from the argument defaults to the model's current value, so it stays the same
+function updateModel({ userName = model.userName, currency = model.currency,
+                       bonds = model.bonds, savings = model.savings }) {
+  model.userName = userName;
+  model.currency = currency;
+  model.bonds    = bonds;
+  if (savings >= 0) model.savings = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
 }
 
-function onSavings(e) {
-  const n = e.target.valueAsNumber;     // NaN when the box holds no number
-  if (n >= 0) savings = n;              // NaN >= 0 is false, so this rejects NaN too
-  else e.target.value = savings;        // rejected: put the last valid number back
-  draw();
-}
-
+// Update View
 const template = () => html`
-  <p><label>Your name: <input @input=${e => { userName = e.target.value; draw(); }}></label></p>
+  <p><label>Your name: <input @input=${onName}></label></p>
   <p><label>Currency:
-    <select @change=${e => { currency = e.target.value; draw(); }}>
+    <select @change=${onCurrency}>
       <option>USD</option>
       <option>EUR</option>
       <option>SGD</option>
     </select></label></p>
-  <p><button @click=${() => { bonds++; draw(); }}>+1</button>
-    <output>we have ${bonds} thousand${bonds === 1 ? '' : 's'} in bonds</output></p>
-  <p><button @click=${() => setMoney(98, 765)}>rich</button>
-    <button @click=${() => setMoney(0, 123)}>poor</button></p>
-  <p><label>Savings: <input type="number" .value=${savings} @input=${onSavings}></label></p>
-  <p>Total: <output>${userName} has a total of ${currency} ${bonds * 1000 + savings}</output></p>`;
+  <p><button @click=${onAddBond}>+1</button>
+    <output>we have ${model.bonds} thousand${model.bonds === 1 ? '' : 's'} in bonds</output></p>
+  <p><button @click=${onRich}>rich</button>
+    <button @click=${onPoor}>poor</button></p>
+  <p><label>Savings: <input type="number" .value=${model.savings} @input=${onSavings}></label></p>
+  <p>Total: <output>${model.userName} has a total of ${model.currency} ${model.bonds * 1000 + model.savings}</output></p>`;
 
-const draw = () => render(template(), document.querySelector('#app'));
+function updateView() {
+  render(template(), document.querySelector('#app'));
+}
 
-draw();
+// Controller: the template's @ slots attach these
+function onName(e)     { updateModel({ userName: e.target.value }); updateView(); }
+function onCurrency(e) { updateModel({ currency: e.target.value }); updateView(); }
+function onAddBond()   { updateModel({ bonds: model.bonds + 1 });   updateView(); }
+function onRich()      { updateModel({ bonds: 98, savings: 765 });  updateView(); }
+function onPoor()      { updateModel({ bonds: 0, savings: 123 });   updateView(); }
+function onSavings(e) {
+  updateModel({ savings: e.target.valueAsNumber });
+  // Rejected (a minus, an empty box): the model didn't change, so render won't touch the box,
+  // because lit-html compares with what it last wrote, not with what the box shows. Put it back here.
+  if (e.target.valueAsNumber !== model.savings) e.target.value = model.savings;
+  updateView();
+}
+
+updateView();
 ```
 
 - `index.html` lost the form and gained the import map (see Terms) and an empty `<div id="app">`, the container. It already names both libraries, so it doesn't change again. The browser fetches a library only when some code imports it, so this build never loads Preact.
+- The model and `updateModel` are unchanged. Only the view and the controller change.
 - `template` holds the same markup as Build 0's `<body>`, inside `` html`…` ``: a template literal with the tag `html` in front. It describes the page and changes nothing. Each `${…}` is a slot that lit-html fills, and three kinds appear here:
-  - **Child slot,** between tags, as in `<output>we have ${bonds} …</output>`: the value becomes text. lit-html always inserts it as text, never as HTML, so a slot is as safe as `textContent`.
-  - **Event slot,** `@input=${fn}`: lit-html calls `addEventListener('input', fn)` on that element for you. Event slots replace Build 0's `addEventListener` lines, and with them the `querySelector` lines and the `id`s.
-  - **Property slot,** `.value=${savings}`: sets the box's `value` property, as `savingsBox.value = savings` did, the first time included. The dot matters. Without it, `value=${savings}` would set the `value` *attribute*, which only supplies the box's starting value: once the user has typed, changing the attribute no longer changes what the box shows.
+  - **Child slot,** between tags, as in `<output>we have ${model.bonds} …</output>`: the value becomes text. lit-html always inserts it as text, never as HTML, so a slot is as safe as `textContent`.
+  - **Event slot,** `@input=${onName}`: lit-html calls `addEventListener('input', onName)` on that element for you. Event slots replace Build 0's `addEventListener` lines, and with them the `querySelector` lines and the `id`s.
+  - **Property slot,** `.value=${model.savings}`: sets the box's `value` property, as Build 0's `savingsBox.value = model.savings` did, the first time included. The dot matters. Without it, `value=${model.savings}` would set the `value` *attribute*, which only supplies the box's starting value: once the user has typed, changing the attribute no longer changes what the box shows.
 - Only the savings box has a `.value` slot, because only its value is ever changed by code (by `rich` and `poor`). The name box and the currency list only report what the user did.
-- `e.target` is the element the event happened on. Build 0 kept each element in a variable; here none does, so each handler gets its element from the event `e`.
-- `draw()` must still follow every change, as in Build 0, but it now writes the whole page from one template. `render` compares each slot with its value from the last call and touches only the slots that changed: a key press in the name box changes only the total's text.
-- That comparison is against what lit-html last wrote, not against what the box shows, which is why `onSavings` still puts the number back itself. After a rejected key `savings` is unchanged, so the `.value` slot gets the same value as last time and `render` leaves the box alone.
-- `setMoney`, `onSavings` and the template all call `draw`, which is defined below them. That works because none of them runs before the last line, `draw()`, or a later event.
+- `updateView()` is now one call: `render` writes `template()` into the container. It compares each slot with its value from the last call and touches only the slots that changed: a key press in the name box changes only the total's text, where Build 0's `updateView` rewrote both outputs.
+- **Controller:** the listeners became named functions, which the template's `@` slots attach. `e.target` is the element the event happened on. Build 0 kept each element in a variable; here none does, so each handler gets its element from the event `e`. The template names the handlers before they are defined; that works because a `function` declaration exists from the start of the file, and nothing runs before the last line, `updateView()`.
+- **The put-back moved** from the view into `onSavings`. `render` compares each slot with what lit-html last wrote, not with what the box shows. After a rejected key the model is unchanged, so the `.value` slot gets the same value as last time and `render` leaves the box alone. So `onSavings` makes the same comparison that Build 0's `updateView` made, and writes the box itself.
 
 What changed from Build 0:
 
 1. The form moved from `index.html` into `template`.
-2. The eight `querySelector` lines and six `addEventListener` lines became `@` slots.
-3. `draw()` calls `render` instead of setting `textContent` twice, and `setMoney` no longer writes the box: the `.value` slot does.
-4. The handlers get their element from `e.target`.
+2. The `querySelector` lines are gone, and the `addEventListener` lines became named handlers that `@` slots attach.
+3. `updateView` calls `render` instead of writing each element by hand.
+4. The savings put-back moved from `updateView` into `onSavings`.
 
 **Try it:** everything from Build 0 behaves the same. Then open F12 → Elements, expand the page, and type a name: Chrome briefly highlights each part of the page it changes, and only the total's text flashes.
 
-## Build 2: signal and effect
+### Build 2.2: signal and effect
 
 **Read:**
 
@@ -254,33 +700,45 @@ What changed from Build 0:
 import { signal, effect } from '@preact/signals-core';
 import { html, render } from 'lit-html';
 
-const userName = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
+// Model state: each field is a signal
+const model = { userName: signal(''), currency: signal('USD'), bonds: signal(0), savings: signal(0) };
 
-function setMoney(b, s) {
-  bonds.value = b;
-  savings.value = s;
+// Update model: a field missing from the argument defaults to the model's current value, so it stays the same
+function updateModel({ userName = model.userName.value, currency = model.currency.value,
+                       bonds = model.bonds.value, savings = model.savings.value }) {
+  model.userName.value = userName;
+  model.currency.value = currency;
+  model.bonds.value    = bonds;
+  if (savings >= 0) model.savings.value = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
 }
 
-function onSavings(e) {
-  const n = e.target.valueAsNumber;     // NaN when the box holds no number
-  if (n >= 0) savings.value = n;        // NaN >= 0 is false, so this rejects NaN too
-  else e.target.value = savings.value;  // rejected: put the last valid number back
-}
-
+// Update View
 const template = () => html`
-  <p><label>Your name: <input @input=${e => userName.value = e.target.value}></label></p>
+  <p><label>Your name: <input @input=${onName}></label></p>
   <p><label>Currency:
-    <select @change=${e => currency.value = e.target.value}>
+    <select @change=${onCurrency}>
       <option>USD</option>
       <option>EUR</option>
       <option>SGD</option>
     </select></label></p>
-  <p><button @click=${() => bonds.value++}>+1</button>
-    <output>we have ${bonds.value} thousand${bonds.value === 1 ? '' : 's'} in bonds</output></p>
-  <p><button @click=${() => setMoney(98, 765)}>rich</button>
-    <button @click=${() => setMoney(0, 123)}>poor</button></p>
-  <p><label>Savings: <input type="number" .value=${savings.value} @input=${onSavings}></label></p>
-  <p>Total: <output>${userName.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}</output></p>`;
+  <p><button @click=${onAddBond}>+1</button>
+    <output>we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds</output></p>
+  <p><button @click=${onRich}>rich</button>
+    <button @click=${onPoor}>poor</button></p>
+  <p><label>Savings: <input type="number" .value=${model.savings.value} @input=${onSavings}></label></p>
+  <p>Total: <output>${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}</output></p>`;
+
+// Controller: the template's @ slots attach these
+function onName(e)     { updateModel({ userName: e.target.value }); }
+function onCurrency(e) { updateModel({ currency: e.target.value }); }
+function onAddBond()   { updateModel({ bonds: model.bonds.value + 1 }); }
+function onRich()      { updateModel({ bonds: 98, savings: 765 }); }
+function onPoor()      { updateModel({ bonds: 0, savings: 123 }); }
+function onSavings(e) {
+  updateModel({ savings: e.target.valueAsNumber });
+  // Rejected (a minus, an empty box): no signal changed, so no redraw runs. Put it back here.
+  if (e.target.valueAsNumber !== model.savings.value) e.target.value = model.savings.value;
+}
 
 effect(() => {
   console.log('render');
@@ -290,27 +748,28 @@ effect(() => {
 
 `index.html` stays as it is.
 
-- `signal('')` makes a box holding one value, and `.value` reads or writes it. The four state values are now signals. They are `const` because each name always refers to the same box; only what is inside changes.
+- `signal('')` makes a box holding one value, and `.value` reads or writes it. Each of the model's four fields is now a signal, so `model.bonds` is the box and `model.bonds.value` the number in it.
+- `updateModel` keeps its shape; its reads and writes now go through `.value`. It writes every field on every call, changed or not (savings only when valid), but writing a signal the value it already holds notifies nobody, so only the fields that really changed cause a redraw.
 - `effect(fn)` runs `fn` once, now, and again each time a signal that `fn` read on its last run changes. The template reads all four signals, so a change to any of them redraws the page. `console.log('render')` prints a line in the console on each run.
-- The handlers now only write signals: there is no `draw()` anywhere. `e => userName.value = e.target.value` is an arrow function whose body is one expression, the assignment. Its result is returned, and lit-html ignores it.
-- The redraw happens inside the write: `bonds.value = 98` returns only after the effect has run and the page is updated. The README says so: "Changing a signal's value synchronously updates every computed and effect that depends on that signal".
-- After a rejected key, `onSavings` writes no signal, so no effect runs and nothing redraws. Putting the number back is still its own job.
+- The handlers now only update the model: `updateView` and every call to it are gone, and the effect at the end replaces them.
+- The redraw happens inside the write: `model.bonds.value = 98` returns only after the effect has run and the page is updated. The README says so: "Changing a signal's value synchronously updates every computed and effect that depends on that signal".
+- After a rejected key, `updateModel` changes no signal, so no effect runs and nothing redraws. Putting the number back is still `onSavings`'s job.
 
-What changed from Build 1:
+What changed from Build 2.1:
 
-1. The four `let`s became `signal`s, and every read and write goes through `.value`.
-2. Every `draw()` call is gone, and `draw` itself became the `effect`.
+1. The model's fields became `signal`s, and every read and write goes through `.value`.
+2. `updateView` and its calls are gone; the `effect` replaces them.
 3. The effect logs `render`.
 
 **Try it,** with the console open:
 
 - Type `Ann`: three `render`s, one per key press.
 - Click `+1`: one `render`.
-- Click `rich`: **two** `render`s, one after `bonds.value = 98` and one after `savings.value = 765`. In between, the page held bonds 98 with the old savings, for an instant. Build 4 removes that.
-- Click `rich` again: no `render`. Both writes store the value that is already there, and writing the same value notifies nobody.
+- Click `rich`: **two** `render`s, one after `model.bonds.value = 98` and one after `model.savings.value = 765`. The writes to `userName` and `currency` store the values already there, so they cause none. In between, the page held bonds 98 with the old savings, for an instant. Build 2.4 removes that.
+- Click `rich` again: no `render`. Every write stores the value that is already there.
 - Type `-` into the savings box: no `render`.
 
-## Build 3: computed
+### Build 2.3: computed
 
 **Read:**
 
@@ -323,39 +782,52 @@ What changed from Build 1:
 import { signal, computed, effect } from '@preact/signals-core';
 import { html, render } from 'lit-html';
 
-const userName = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
+// Model state: each field is a signal
+const model = { userName: signal(''), currency: signal('USD'), bonds: signal(0), savings: signal(0) };
 
+// Update model: a field missing from the argument defaults to the model's current value, so it stays the same
+function updateModel({ userName = model.userName.value, currency = model.currency.value,
+                       bonds = model.bonds.value, savings = model.savings.value }) {
+  model.userName.value = userName;
+  model.currency.value = currency;
+  model.bonds.value    = bonds;
+  if (savings >= 0) model.savings.value = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
+}
+
+// Derived values
 const bondsText = computed(() => {
   console.log('bondsText');
-  return `we have ${bonds.value} thousand${bonds.value === 1 ? '' : 's'} in bonds`;
+  return `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
 });
-const totalText = computed(() => `${userName.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}`);
+const totalText = computed(() => `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`);
 
-function setMoney(b, s) {
-  bonds.value = b;
-  savings.value = s;
-}
-
-function onSavings(e) {
-  const n = e.target.valueAsNumber;     // NaN when the box holds no number
-  if (n >= 0) savings.value = n;        // NaN >= 0 is false, so this rejects NaN too
-  else e.target.value = savings.value;  // rejected: put the last valid number back
-}
-
+// Update View
 const template = () => html`
-  <p><label>Your name: <input @input=${e => userName.value = e.target.value}></label></p>
+  <p><label>Your name: <input @input=${onName}></label></p>
   <p><label>Currency:
-    <select @change=${e => currency.value = e.target.value}>
+    <select @change=${onCurrency}>
       <option>USD</option>
       <option>EUR</option>
       <option>SGD</option>
     </select></label></p>
-  <p><button @click=${() => bonds.value++}>+1</button>
+  <p><button @click=${onAddBond}>+1</button>
     <output>${bondsText.value}</output></p>
-  <p><button @click=${() => setMoney(98, 765)}>rich</button>
-    <button @click=${() => setMoney(0, 123)}>poor</button></p>
-  <p><label>Savings: <input type="number" .value=${savings.value} @input=${onSavings}></label></p>
+  <p><button @click=${onRich}>rich</button>
+    <button @click=${onPoor}>poor</button></p>
+  <p><label>Savings: <input type="number" .value=${model.savings.value} @input=${onSavings}></label></p>
   <p>Total: <output>${totalText.value}</output></p>`;
+
+// Controller: the template's @ slots attach these
+function onName(e)     { updateModel({ userName: e.target.value }); }
+function onCurrency(e) { updateModel({ currency: e.target.value }); }
+function onAddBond()   { updateModel({ bonds: model.bonds.value + 1 }); }
+function onRich()      { updateModel({ bonds: 98, savings: 765 }); }
+function onPoor()      { updateModel({ bonds: 0, savings: 123 }); }
+function onSavings(e) {
+  updateModel({ savings: e.target.valueAsNumber });
+  // Rejected (a minus, an empty box): no signal changed, so no redraw runs. Put it back here.
+  if (e.target.valueAsNumber !== model.savings.value) e.target.value = model.savings.value;
+}
 
 effect(() => {
   console.log('render');
@@ -363,7 +835,7 @@ effect(() => {
 });
 ```
 
-- `computed(fn)` makes a read-only signal whose value is `fn`'s result. It runs `fn` again only when one of the signals `fn` read has changed, and only when someone reads its `.value`; otherwise `.value` returns the stored result. `bondsText` and `totalText` hold the two sentences that the template used to build inline.
+- `computed(fn)` makes a read-only signal whose value is `fn`'s result. It runs `fn` again only when one of the signals `fn` read has changed, and only when someone reads its `.value`; otherwise `.value` returns the stored result. `bondsText` and `totalText` hold the two sentences that the template used to build inline. They sit with the model, because they are worked out from its data.
 - The template now reads `bondsText.value` and `totalText.value`. The effect is subscribed to the two computeds, and through them to the signals they read.
 - `bondsText` logs each time it recalculates. With a second statement, its arrow function needs braces and a `return` (see *=> (arrow function)* in Terms).
 - What `computed` gives you:
@@ -373,7 +845,7 @@ effect(() => {
 
   At this size the caching saves nothing you could measure. It pays off when a derived value is costly to work out, such as a long sorted list, or is read in several places, since it is then worked out once and shared.
 
-What changed from Build 2:
+What changed from Build 2.2:
 
 1. `computed` joined the import.
 2. Two computeds hold the two sentences.
@@ -385,66 +857,34 @@ What changed from Build 2:
 - Click `+1`: `bondsText`, then `render`. Before it re-runs an effect, Preact Signals recalculates the computeds the effect read, to check that something really changed, so the computed logs first.
 - Click `rich`: `bondsText`, `render`, `render`. The second run comes from the `savings` write, and `bondsText` doesn't recalculate for it: `bonds` hasn't changed since the first run.
 
-## Build 4: batch
+### Build 2.4: batch
 
 **Read:** the signals-core README: [`batch(fn)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#batchfn), its first example.
 
-**Code:** replace `.temp/money-app/main.js` with:
+**Code:** in `.temp/money-app/main.js`, add `batch` to the import on the first line, and change `updateModel` to:
 
 ```js
-import { signal, computed, effect, batch } from '@preact/signals-core';
-import { html, render } from 'lit-html';
-
-const userName = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
-
-const bondsText = computed(() => {
-  console.log('bondsText');
-  return `we have ${bonds.value} thousand${bonds.value === 1 ? '' : 's'} in bonds`;
-});
-const totalText = computed(() => `${userName.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}`);
-
-function setMoney(b, s) {
+function updateModel({ userName = model.userName.value, currency = model.currency.value,
+                       bonds = model.bonds.value, savings = model.savings.value }) {
   batch(() => {
-    bonds.value = b;
-    savings.value = s;
+    model.userName.value = userName;
+    model.currency.value = currency;
+    model.bonds.value    = bonds;
+    if (savings >= 0) model.savings.value = savings;   // never negative; NaN >= 0 is false, so this rejects NaN too
   });
 }
-
-function onSavings(e) {
-  const n = e.target.valueAsNumber;     // NaN when the box holds no number
-  if (n >= 0) savings.value = n;        // NaN >= 0 is false, so this rejects NaN too
-  else e.target.value = savings.value;  // rejected: put the last valid number back
-}
-
-const template = () => html`
-  <p><label>Your name: <input @input=${e => userName.value = e.target.value}></label></p>
-  <p><label>Currency:
-    <select @change=${e => currency.value = e.target.value}>
-      <option>USD</option>
-      <option>EUR</option>
-      <option>SGD</option>
-    </select></label></p>
-  <p><button @click=${() => bonds.value++}>+1</button>
-    <output>${bondsText.value}</output></p>
-  <p><button @click=${() => setMoney(98, 765)}>rich</button>
-    <button @click=${() => setMoney(0, 123)}>poor</button></p>
-  <p><label>Savings: <input type="number" .value=${savings.value} @input=${onSavings}></label></p>
-  <p>Total: <output>${totalText.value}</output></p>`;
-
-effect(() => {
-  console.log('render');
-  render(template(), document.querySelector('#app'));
-});
 ```
 
-- `batch(fn)` runs `fn` and holds back every effect until `fn` returns; then each effect whose signals changed runs once. `setMoney` is the only place where one action writes two signals, so it is the only place with a `batch`.
-- On screen nothing changes from Build 3. The browser runs JavaScript and paints the page on the same thread, and it paints only after the click handler has returned, so Build 3's half-updated page was never shown. What `batch` removes is the wasted run, and the moment in which the effect saw bonds 98 with the old savings.
+The whole file is now exactly [Build 1.4's `main.js`](#build-14-lit-html), so you can also copy it from there.
+
+- `batch(fn)` runs `fn` and holds back every effect until `fn` returns; then each effect whose signals changed runs once. `updateModel` is the only code that writes the model, so one `batch` there covers every action: `rich`, `poor`, and any later one that changes several fields at once. An update that changes one field runs the effect once, as before.
+- On screen nothing changes from Build 2.3. The browser runs JavaScript and paints the page on the same thread, and it paints only after the click handler has returned, so Build 2.3's half-updated page was never shown. What `batch` removes is the wasted run, and the moment in which the effect saw bonds 98 with the old savings.
 - That moment matters once an effect does more than draw. An effect that logs the total, saves it, or sends it over the network would do so twice per click, once with a wrong total.
 
-What changed from Build 3: `batch` joined the import, and `setMoney` wraps its two writes in `batch(() => { … })`.
+What changed from Build 2.3: `batch` joined the import, and `updateModel` wraps its writes in `batch(() => { … })`.
 
 **Try it:** click `rich`, then `poor`. Each logs one `bondsText` and one `render`.
 
 ## Next
 
-[STUDY_PLAN_2.md](STUDY_PLAN_2.md) uses the same tools on the dot runner and splits an app into model, view and controller. Its Step 0 builds a lit-html and Preact Signals hello world, which repeats Builds 1 and 2 here, so you can go through it quickly. Delete `.temp/money-app` when you no longer need it.
+[STUDY_PLAN_2.md](STUDY_PLAN_2.md) uses the same tools on the dot runner and puts the model, the view and the controller in separate files. Its Step 0 builds a lit-html and Preact Signals hello world, which repeats Builds 1 and 2 here, so you can go through it quickly. Delete `.temp/money-app` when you no longer need it.
