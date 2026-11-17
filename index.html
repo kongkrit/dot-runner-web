@@ -9,21 +9,22 @@
       "@preact/signals-core": "./vendor/signals-core.mjs"
   } }
   </script>
+  <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
   <style>
     body { background: #333; color: #eee; }
     .matrix { border-collapse: collapse; background: #111; }
-    .matrix td { width: 15px; height: 15px; border: 1px solid #333; }
+    .matrix td { width: 10px; height: 10px; border: 1px solid #333; }
     .matrix td.on { background: #f33; }
-    output { font: 1.5em monospace; }
+    output { font: 1.0em monospace; }
   </style>
 </head>
 <body>
   <p>Arrow keys move, Space stops.</p>
-  <h2>singleton</h2>
+  <h3>singleton</h3>
   <div id="app-singleton"></div>
-  <h2>factory</h2>
+  <h3>factory</h3>
   <div id="app-factory"></div>
-  <h2>class</h2>
+  <h3>class</h3>
   <div id="app-class"></div>
   <script type="module" src="./singleton/main.js"></script>
   <script type="module" src="./factory/main.js"></script>

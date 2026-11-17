@@ -62,9 +62,9 @@ The app is split like the C original in `C/`: model, view, controller, and a mai
 
 ## Layout
 
-- `index.html` — page shell: import map, grid CSS, one container and one module script per version.
+- `index.html` — page shell: import map, Eruda console, grid CSS, one container and one module script per version.
 - `singleton/`, `factory/`, `class/` — the three versions, five files each (see Architecture rules).
-- `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is.
+- `vendor/` — minified lit-html 3.3.3 and @preact/signals-core 1.14.5, used as-is; also minified Eruda 3.4.3 (`eruda.js`), an in-page console that `index.html` loads with a plain `<script>`, for debugging only.
 - `.checks/` — `boundaries.py` checks the Architecture rules; `stop-hook.sh` runs it as the `Stop` hook.
 - `.claude/settings.json` — committed settings, permission allowlist and hooks (`SessionStart` prints `.claude/PROGRESS.md`; `PostToolUse` and `Stop` run the check). Personal overrides go in the gitignored `.claude/settings.local.json`, never here.
 - `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md`, the latest session handoff (older ones are in its git history), then commits.
@@ -74,7 +74,7 @@ The app is split like the C original in `C/`: model, view, controller, and a mai
 - `.vscode/settings.json` — shared VS Code workspace settings, tracked: hides `.temp/.placeholder` from the Explorer.
 - `README.md` — front page: what this is, how to run it, links to the other docs; short and unfolded.
 - `HOW_AND_WALKTHROUGH.md` — how it works, the code walkthrough, the three patterns compared, the Claude Code and Debian setup. The walkthrough copies each source file in full, so update it in the same change as the file; the two `model-controller-common.js` copies only point to the singleton one.
-- `STUDY_PLAN_1.md` — the first study path: one form app (name, currency, bonds, savings, total) in `.temp/money-app`, each build a model (`model`, `updateModel`), view and controller in one `main.js`. Build 0 is plain DOM; two tracks then add the same four ideas and end at the same `main.js`: Track 1 adds `signal` and `effect`, `computed`, `batch`, then lit-html (Builds 1.1–1.4); Track 2 adds lit-html first (Builds 2.1–2.4). The final `main.js` is printed once, in Build 1.4. It links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when they move.
+- `STUDY_PLAN_1.md` — the first study path: one form app (name, currency, bonds, savings, total) in `.temp/money-app`, each build a model (`model`, `updateModel`), view and controller in one `main.js`. Build 0 is plain DOM; Builds 1–5 add `signal` and `effect`, `computed`, `batch`, one section per component (separated by `// ---------------` lines, each with its own `effect`), then lit-html with one template per component. It links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when they move.
 - `STUDY_PLAN_2.md` — the learner's read-then-build path. It quotes the source and links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when either moves.
 - `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo; read it before working on that.
 

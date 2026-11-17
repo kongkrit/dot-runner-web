@@ -16,7 +16,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 
 | File | Role |
 |------|------|
-| `index.html` | Page shell: the import map, the grid's CSS, the empty `#app-singleton`, `#app-factory` and `#app-class` containers, and one module script per version. |
+| `index.html` | Page shell: the import map, the Eruda console, the grid's CSS, the empty `#app-singleton`, `#app-factory` and `#app-class` containers, and one module script per version. |
 | `singleton/model-controller-common.js` | The `Cmd` table: the message the controller sends to the model, shared by those two only, like the C `command` enum. |
 | `singleton/model.js` | Grid size, state and update rule: `WIDTH`, `HEIGHT`, the `row` and `col` signals and `cmd` at file level, and the one `model` object with `width`, `height`, read-only `row`, `col` and `hex` computeds, and `update(c)`. No DOM. |
 | `singleton/view.js` | `viewUpdate(m, container)`: renders a lit-html template of the model's grid (its `width` × `height`) and the hex readout into the container. Reads signals, writes none. |
@@ -32,7 +32,7 @@ The code is split the way an embedded C program often is: a model (state plus th
 | `class/view.js` | The same template, behind `class View`: `new View(container)` keeps the container in a private field, and `view.update(m)` draws. |
 | `class/controller.js` | The same controller as `class Controller`, each with its own private `#pending` latch. |
 | `class/main.js` | The same wiring, after creating one model, one view and one controller with `new`; wraps the key listener so that `keydown` keeps `this`; draws into `#app-class`. |
-| `vendor/` | lit-html 3.3.3 (`lit-html.js`) and @preact/signals-core 1.14.5 (`signals-core.mjs`, the package's `dist/signals-core.mjs`), the published files used as-is. |
+| `vendor/` | lit-html 3.3.3 (`lit-html.js`) and @preact/signals-core 1.14.5 (`signals-core.mjs`, the package's `dist/signals-core.mjs`), and Eruda 3.4.3 (`eruda.js`), an in-page console for debugging; the published files used as-is. |
 | `C/` | The original bare-metal C program that the JavaScript ports, not loaded by the page: `dot_runner.c`, whose `model_t`, `model_update()`, `view_update()` and `controller_read()` the code comments name, and `baremetal_binary.h`, its `B8()` macro for binary literals. |
 
 </details>
@@ -140,7 +140,7 @@ Each file in full, cut into short parts, each part followed by its notes. `index
 ### `index.html`
 
 <details>
-<summary>Page tree, import map, CSS rules, three containers, three module scripts</summary>
+<summary>Page tree, import map, Eruda console, CSS rules, three containers, three module scripts</summary>
 <br>
 
 Library names: none. The import map only tells the browser where the two libraries live.
@@ -157,39 +157,41 @@ Library names: none. The import map only tells the browser where the two librari
       "@preact/signals-core": "./vendor/signals-core.mjs"
   } }
   </script>
+  <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 ```
 
 - `<!doctype html>` asks for standard rendering instead of a legacy compatibility mode.
 - `<html lang="en">` opens the root element. `lang="en"` is an attribute, a `name="value"` setting written inside a tag. It marks the page's text as English, so screen readers use English pronunciation and browsers know the language when they offer to translate.
 - Tags nest into a tree that the browser parses into the DOM: `<html>` holds `<head>` (setup, never drawn) and `<body>` (what you see, in the last part). `<meta charset="utf-8">` says how to decode the file's bytes into text, and `<title>` names the browser tab.
 - `<script type="importmap">` is the import map from [How it works](#how-it-works). Its paths are relative to the page, so `./vendor/lit-html.js` means `http://localhost:8000/vendor/lit-html.js`. It must come before the module scripts: browsers apply the map only to imports resolved after they have read it.
+- The `<!-- add console display -->` line adds [Eruda](https://github.com/liriliri/eruda), a console panel at the bottom of the page that shows what `console.log` prints.
 
 ```html
   <style>
     body { background: #333; color: #eee; }
     .matrix { border-collapse: collapse; background: #111; }
-    .matrix td { width: 15px; height: 15px; border: 1px solid #333; }
+    .matrix td { width: 10px; height: 10px; border: 1px solid #333; }
     .matrix td.on { background: #f33; }
-    output { font: 1.5em monospace; }
+    output { font: 1.0em monospace; }
   </style>
 ```
 
 - `<style>` holds CSS rules of the form `selector { property: value; }`. The selector picks the elements a rule applies to.
 - `body` is the `<body>` element: dark gray background, light gray text. Colors are hex RGB, and three digits are shorthand for six: `#f33` means `#ff3333` (red 255, green 51, blue 51).
 - `.matrix` is any element with `class="matrix"`, here the table. `border-collapse: collapse` makes neighboring cells share one border line instead of each drawing its own with a gap between.
-- `.matrix td` is every `<td>` inside it: 15 × 15 px, with a 1 px border in the page's color, so the grid lines look like gaps.
+- `.matrix td` is every `<td>` inside it: 10 × 10 px, with a 1 px border in the page's color, so the grid lines look like gaps.
 - `.matrix td.on` is a cell that also has class `on`. This rule alone makes the dot red: the view never sets a color, it only puts `on` in one cell's class. Looks live in CSS, structure in the template.
-- `output` is the hex readout: a fixed-width font at `1.5em`. With the family given only as `monospace`, browsers start from their monospace default, 13 px in Chrome, so this comes out at 19.5 px rather than 1.5 × the 16 px body text (24 px).
+- `output` is the hex readout: a fixed-width font at `1.0em`. With the family given only as `monospace`, browsers start from their monospace default, 13 px in Chrome, so this comes out at 13 px rather than the 16 px of the body text.
 
 ```html
 </head>
 <body>
   <p>Arrow keys move, Space stops.</p>
-  <h2>singleton</h2>
+  <h3>singleton</h3>
   <div id="app-singleton"></div>
-  <h2>factory</h2>
+  <h3>factory</h3>
   <div id="app-factory"></div>
-  <h2>class</h2>
+  <h3>class</h3>
   <div id="app-class"></div>
   <script type="module" src="./singleton/main.js"></script>
   <script type="module" src="./factory/main.js"></script>
@@ -198,7 +200,7 @@ Library names: none. The import map only tells the browser where the two librari
 </html>
 ```
 
-- `<p>` is a paragraph of text: the instruction line. `<h2>` is a second-level heading, here the label above each app.
+- `<p>` is a paragraph of text: the instruction line. `<h3>` is a third-level heading, smaller than `<h2>`, here the label above each app.
 - `<div id="app-singleton">`, `<div id="app-factory">` and `<div id="app-class">` are empty `<div>`s, the three containers. `id` gives an element a name unique in the page, and `#app-singleton` is the CSS selector for it. JavaScript draws one app into each box.
 - `<script type="module" src="./singleton/main.js">` loads `singleton/main.js` as a module: a file with its own scope, which shares only the names it `export`s and gets other files' names with `import`. That is close to a C file where everything is `static` except what it exports, but there is no linker: the browser fetches each imported file by URL while loading. A module script also waits until the whole page is parsed, so the containers exist by the time it runs. Each of the three scripts starts one app; its imports pull in the other four files of that version's folder, and the libraries.
 

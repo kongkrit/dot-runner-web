@@ -39,6 +39,7 @@ mkdir -p .temp/hello-signals && cp -r vendor .temp/hello-signals/
       "@preact/signals-core": "./vendor/signals-core.mjs"
   } }
   </script>
+  <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 </head>
 <body>
   <div id="app"></div>
@@ -47,7 +48,7 @@ mkdir -p .temp/hello-signals && cp -r vendor .temp/hello-signals/
 </html>
 ```
 
-The `<style>` line makes the page dark. `:root { color-scheme: dark; }` tells the browser to draw its own parts, such as the button, dark too (`:root` is the `<html>` element); without it form controls stay light. The `body` rule is the repo's: a dark gray background with light gray text ([Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml) explains the colors). The import map names both libraries from the start, so this file never changes. The browser fetches a module only when some code imports it, so Build 1 never loads Preact.
+The `<style>` line makes the page dark. `:root { color-scheme: dark; }` tells the browser to draw its own parts, such as the button, dark too (`:root` is the `<html>` element); without it form controls stay light. The `body` rule is the repo's: a dark gray background with light gray text ([Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml) explains the colors). The `<!-- add console display -->` line loads Eruda, an in-page console, from `vendor/`: a panel at the bottom of the page that shows what `console.log` prints, and any errors, without opening F12. The import map names both libraries from the start, so this file never changes. The browser fetches a module only when some code imports it, so Build 1 never loads Preact.
 
 ### Build 1: lit-html alone
 

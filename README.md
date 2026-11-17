@@ -10,7 +10,7 @@ A small project for learning [Preact Signals](https://github.com/preactjs/signal
 uv run --no-project python -m http.server 8000
 ```
 
-Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. Ctrl+C stops the server.
+Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. The panel at the bottom is [Eruda](https://github.com/liriliri/eruda), an in-page console that shows `console.log` output and errors; its floating button hides it. Ctrl+C stops the server.
 
 - **Why a server:** Chrome refuses to load ES modules (`<script type="module">`) from a `file://` page, so opening `index.html` directly shows the headings but no grids.
 - **Why `--no-project`:** uv skips looking for a `pyproject.toml` and creates no venv. It just runs Python's built-in file server.
@@ -19,6 +19,6 @@ Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. 
 ## Documents
 
 - [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) — how the app works, every source file explained part by part, the three patterns compared, and the Claude Code and Debian setup.
-- [STUDY_PLAN_1.md](STUDY_PLAN_1.md) — start here: one small form app, from plain DOM code to Preact Signals (`signal`, `effect`, `computed`, `batch`) and lit-html, in two tracks: signals first or lit-html first.
+- [STUDY_PLAN_1.md](STUDY_PLAN_1.md) — start here: one small form app, from plain DOM code to Preact Signals (`signal`, `effect`, `computed`, `batch`), then one section per component, then lit-html.
 - [STUDY_PLAN_2.md](STUDY_PLAN_2.md) — a read-then-build path: a hello world, a step counter in each version, then an app of your own.
 - [TEMPLATE_PROPOSAL.md](TEMPLATE_PROPOSAL.md) — a proposal (not started) to turn this setup into a reusable MVC template repo.
