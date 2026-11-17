@@ -32,9 +32,9 @@ Goal: as simple as possible, without saying anything false.
 
 ## Learning style
 
-The user finds the hard part of learning any new tech to be getting a "hello world" working and learning the syntax and patterns to build one small "house". Scaling from there to a "city" is easy for them. So when teaching or planning study (as in `STUDY_PLAN_1.md` and `STUDY_PLAN_2.md`):
+The user finds the hard part of learning any new tech to be getting a "hello world" working and learning the syntax and patterns to build one small "house". Scaling from there to a "city" is easy for them. So when teaching or planning study (as in `STUDY_PLAN_1.md`, `STUDY_PLAN_2.md` and `STUDY_PLAN_3.md`):
 
-- Give each step two parts: first the sections to read and absorb, in order; then a small runnable build, hint first and solution folded. Exception, at the user's request: `STUDY_PLAN_1.md` prints each build in full and explains it, with no exercises.
+- Give each step two parts: first the sections to read and absorb, in order; then a small runnable build, hint first and solution folded. Exception, at the user's request: `STUDY_PLAN_1.md` and `STUDY_PLAN_2.md` print each build in full and explain it, with no exercises.
 - Spend the detail on getting the first small thing working. Don't spend effort on scaling up; the user does that on their own.
 - Mention a C parallel only in passing, where it helps. Don't map everything to `C/`.
 
@@ -70,13 +70,14 @@ The app is split like the C original in `C/`: model, view, controller, and a mai
 - `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md`, the latest session handoff (older ones are in its git history), then commits.
 - `.claude/rules/markdown.md` — folding rules for HOW_AND_WALKTHROUGH.md and docs/, loaded automatically for those files.
 - `.gitignore`, `.gitattributes` — ignore rules; LF line endings.
-- `.temp/` — scratch space for the study plans' working folders (`money-app/`, `hello-signals/`). Git ignores all of it except `.placeholder`, and `.checks/boundaries.py` skips it, as it skips every dot-folder.
+- `.temp/` — scratch space for the study plans' working folders (`money-app/`, `name-list/`, `hello-signals/`). Git ignores all of it except `.placeholder`, and `.checks/boundaries.py` skips it, as it skips every dot-folder.
 - `.obsolete/` — retired versions of docs, kept for reference and tracked; each file name ends in a `_YYYYMMDD_HHMM` stamp (`STUDY_PLAN_1_20261117_2107.md`). Nothing links to it, and `.checks/boundaries.py` skips it.
 - `.vscode/settings.json` — shared VS Code workspace settings, tracked: hides `.temp/.placeholder` from the Explorer.
 - `README.md` — front page: what this is, how to run it, links to the other docs; short and unfolded.
 - `HOW_AND_WALKTHROUGH.md` — how it works, the code walkthrough, the three patterns compared, the Claude Code and Debian setup. The walkthrough copies each source file in full, so update it in the same change as the file; the two `model-controller-common.js` copies only point to the singleton one.
 - `STUDY_PLAN_1.md` — the first study path: one form app (name, currency, bonds, savings, total) in `.temp/money-app`, each build a model (`model`, `updateModel`), view and controller in one `main.js`. Build 0 is plain DOM; Builds 1–5 add `signal` and `effect`, `computed`, `batch`, one section per component (separated by `// ---------------` lines, each with its own `effect`), then lit-html with one template per component. It links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when they move.
-- `STUDY_PLAN_2.md` — the learner's read-then-build path. It quotes the source and links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when either moves.
+- `STUDY_PLAN_2.md` — the second study path: a name list in `.temp/name-list` (append, delete, up and down, edit), the case lit-html is made for. `index.html` holds everything static and lit-html draws only the table rows; model (`model.names`, `updateModel(cmd)` with one `case` per build), view and controller in one `main.js`, grouped by component as in STUDY_PLAN_1's Build 4. Build 4 adds view-only state (`editing`). It links HOW_AND_WALKTHROUGH.md and STUDY_PLAN_1.md headings, so update it in the same change when they move.
+- `STUDY_PLAN_3.md` — the learner's read-then-build path on the dot runner. It quotes the source and links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when either moves.
 - `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo; read it before working on that.
 
 ## Conventions

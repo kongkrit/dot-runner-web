@@ -1,4 +1,4 @@
-[README.md](README.md) · [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) · [STUDY_PLAN_2.md](STUDY_PLAN_2.md)
+[README.md](README.md) · [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) · [STUDY_PLAN_2.md](STUDY_PLAN_2.md) · [STUDY_PLAN_3.md](STUDY_PLAN_3.md)
 
 # Study plan 1: one form, six builds
 
@@ -14,7 +14,7 @@ The page's markup stays in `index.html` until Build 5, so each new idea lands in
 
 Every build has the same three parts, in one file: a **model**, which holds the data and the rule that changes it; a **view**, which writes the page from the model; and a **controller**, which turns what the user does into model updates. From Build 4 on, the view and controller code is grouped by component, one section per piece of the page, while the model stays shared. Each build changes only what its new idea needs, so you can compare it with the one before.
 
-Each build has three steps: **read** the listed sections, in order; then copy the code, run it and read the notes under it; then **try** the things listed. You write no code in this plan: every build is printed in full. Afterwards, [STUDY_PLAN_2.md](STUDY_PLAN_2.md) takes the same tools into the dot runner, where the model, view and controller live in separate files.
+Each build has three steps: **read** the listed sections, in order; then copy the code, run it and read the notes under it; then **try** the things listed. You write no code in this plan: every build is printed in full. Afterwards, [STUDY_PLAN_2.md](STUDY_PLAN_2.md) builds a list, where lit-html pays off, and [STUDY_PLAN_3.md](STUDY_PLAN_3.md) takes the same tools into the dot runner, where the model, view and controller live in separate files.
 
 ## The app
 
@@ -709,4 +709,4 @@ What changed from Build 4:
 
 ## Next
 
-[STUDY_PLAN_2.md](STUDY_PLAN_2.md) uses the same tools on the dot runner and puts the model, the view and the controller in separate files. Its Step 0 builds a lit-html and Preact Signals hello world, which repeats Builds 1 and 5 here, so you can go through it quickly. Delete `.temp/money-app` when you no longer need it.
+[STUDY_PLAN_2.md](STUDY_PLAN_2.md) builds a name list whose rows appear, disappear and move: the case lit-html is made for, where Build 5's form wasn't. Then [STUDY_PLAN_3.md](STUDY_PLAN_3.md) uses the same tools on the dot runner and puts the model, the view and the controller in separate files. Delete `.temp/money-app` when you no longer need it.

@@ -1,4 +1,4 @@
-[README.md](README.md) · [STUDY_PLAN_1.md](STUDY_PLAN_1.md) · [STUDY_PLAN_2.md](STUDY_PLAN_2.md)
+[README.md](README.md) · [STUDY_PLAN_1.md](STUDY_PLAN_1.md) · [STUDY_PLAN_2.md](STUDY_PLAN_2.md) · [STUDY_PLAN_3.md](STUDY_PLAN_3.md)
 
 # How it works and code walkthrough
 
