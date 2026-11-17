@@ -16,18 +16,18 @@ The code is split the way an embedded C program often is: a model (state plus th
 |------|------|
 | `index.html` | Page shell: the import map, the grid's CSS, the empty `#app-singleton`, `#app-factory` and `#app-class` containers, and one module script per version. |
 | `singleton/model-controller-common.js` | The `Cmd` table: the message the controller sends to the model, shared by those two only, like the C `command` enum. |
-| `singleton/view.js` | `viewUpdate(m, container)`: renders a lit-html template of the model's grid (its `width` × `height`) and the hex readout into the container. Reads signals, writes none. |
 | `singleton/model.js` | Grid size, state and update rule: `WIDTH`, `HEIGHT`, the `row` and `col` signals and `cmd` at file level, and the one `model` object with `width`, `height`, read-only `row`, `col` and `hex` computeds, and `update(c)`. No DOM. |
+| `singleton/view.js` | `viewUpdate(m, container)`: renders a lit-html template of the model's grid (its `width` × `height`) and the hex readout into the container. Reads signals, writes none. |
 | `singleton/controller.js` | Input: a file-level `pending` latch, and the one `controller` object with `keydown(e)`, which latches a key, and `read()`, which hands the tick the latest key and clears it. |
 | `singleton/main.js` | Wiring: `keydown` → `controller.keydown`, a 150 ms timer → `model.update(controller.read())`, `effect` → `viewUpdate` into `#app-singleton`. |
 | `factory/model-controller-common.js` | A byte-identical copy of `singleton/model-controller-common.js`, so the folders share no file. |
-| `factory/view.js` | The same template, behind `createView(container)`: each view keeps the container it draws into, and `view.update(m)` draws. |
 | `factory/model.js` | The same model built by `createModel()`, so each call gives a new, independent one. |
+| `factory/view.js` | The same template, behind `createView(container)`: each view keeps the container it draws into, and `view.update(m)` draws. |
 | `factory/controller.js` | The same controller built by `createController()`, each with its own latch. |
 | `factory/main.js` | The same wiring, after creating one model, one view and one controller; draws into `#app-factory`. |
 | `class/model-controller-common.js` | Another byte-identical copy of `singleton/model-controller-common.js`. |
-| `class/view.js` | The same template, behind `class View`: `new View(container)` keeps the container in a private field, and `view.update(m)` draws. |
 | `class/model.js` | The same model as `class Model`: each `new Model()` gives a new, independent one, with its state in private `#` fields. |
+| `class/view.js` | The same template, behind `class View`: `new View(container)` keeps the container in a private field, and `view.update(m)` draws. |
 | `class/controller.js` | The same controller as `class Controller`, each with its own private `#pending` latch. |
 | `class/main.js` | The same wiring, after creating one model, one view and one controller with `new`; wraps the key listener so that `keydown` keeps `this`; draws into `#app-class`. |
 | `vendor/` | lit-html 3.3.3 (`lit-html.js`) and @preact/signals-core 1.14.5 (`signals-core.mjs`, the package's `dist/signals-core.mjs`), the published files used as-is. |
@@ -88,6 +88,8 @@ The code is split the way an embedded C program often is: a model (state plus th
 <summary>Preact: signal, computed, effect</summary>
 <br>
 
+Reference: the [signals-core 1.14.5 README](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#guide--api).
+
 - **signal**: a box holding one value. Code that reads `.value` inside a `computed` or `effect` is subscribed to it; writing a *different* value to `.value` notifies the subscribers. Writing the same value notifies nobody.
 - **computed**: a read-only signal whose value is a function of other signals. `model.js` hands out `computed` wrappers around `row` and `col`, so code outside the model can read them but not write them.
 - **effect**: a function that runs immediately, then again whenever a signal it read on its last run changes.
@@ -97,6 +99,8 @@ The code is split the way an embedded C program often is: a model (state plus th
 <details open>
 <summary>lit-html: html, container, render</summary>
 <br>
+
+References: the [Templates API page](https://lit.dev/docs/api/templates/) and the [lit-html 3.3.3 declaration file](https://cdn.jsdelivr.net/npm/lit-html@3.3.3/lit-html.d.ts).
 
 - **html**: a tag written in front of a backtick string, a *tagged template literal* (see the `view.js` walkthrough). It returns a description of the DOM and does not touch the page.
 - **container**: the element that `render` draws into, here `<div id="app-singleton">`, `<div id="app-factory">` or `<div id="app-class">`. The rest of the page is untouched.
@@ -197,7 +201,7 @@ Library names: none. The import map only tells the browser where the two librari
 ### `singleton/`
 
 <details>
-<summary>model-controller-common.js, view.js, model.js, controller.js, main.js: each part exists once</summary>
+<summary>model-controller-common.js, model.js, view.js, controller.js, main.js: each part exists once</summary>
 <dl><dd>
 
 #### `model-controller-common.js`
@@ -219,6 +223,68 @@ export const Cmd = Object.freeze({ NONE: 0, STOP: 1, LEFT: 2, RIGHT: 3, UP: 4, D
 
 </details>
 
+#### `model.js`
+
+<details>
+<summary>Imports, file-level state, the one model, update, wrap-around math</summary>
+<br>
+
+Library names: **`signal`**, **`computed`** and **`.value`** (Preact).
+
+```js
+import { signal, computed } from '@preact/signals-core';
+import { Cmd } from './model-controller-common.js';
+```
+
+- `import { signal, computed } from '@preact/signals-core'` takes two exported names from a module: Preact's two building blocks. A bare name like `@preact/signals-core` goes through the import map to a file in `vendor/`. The model is built from these alone. Nothing in this file touches the page.
+- `'./model-controller-common.js'` is a relative path, which starts with `./` (this file's folder) or `../` (the folder above). Here it is this folder's own file, which provides `Cmd`.
+- @preact/signals-core 1.14.5 exports more: **`effect`** (used in each `main.js`); **`batch`**, which groups several writes so that effects run once, at the end; **`untracked`**, which reads signals without subscribing; **`action`**, which wraps a function so that each call runs batched and untracked; and **`createModel`**, a helper for building models out of signals. That last one is unrelated to `factory/model.js`'s own `createModel`, a plain function of the same name. It also exports the classes `Signal`, `Computed` and `Effect`, which `signal()`, `computed()` and `effect()` create. The [signals-core 1.14.5 README](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#guide--api) documents all of the functions except `action`, which it mentions only under `createModel`.
+
+```js
+const WIDTH = 16, HEIGHT = 8;               // grid size, owned by the model
+const row = signal(4), col = signal(7);     // file-level, like static variables in C
+let cmd = Cmd.STOP;                         // not shown on screen, so plain variable
+```
+
+- `const WIDTH = 16, HEIGHT = 8` is the grid size. Only the models define it, and the other versions repeat these two numbers on purpose. The view learns them from the model it is given, through `width` and `height` below.
+- `const row = signal(4), col = signal(7)` creates two **`signal`** boxes holding the start position. They sit at file level, outside any function, so they exist once, from the moment the file loads, like `static` variables in a C file. They are not exported, so nothing outside this file can reach them.
+- `let cmd = Cmd.STOP` declares a variable that can be reassigned, here holding the last direction; [How it works](#how-it-works), step 2, explains why it is a plain variable and not a signal.
+
+```js
+export const model = {
+  width: WIDTH, height: HEIGHT,             // the view draws whatever size the model says
+  row: computed(() => row.value),           // read-only to outsiders: const model_t *
+  col: computed(() => col.value),
+  hex: computed(() => (row.value << 4) | col.value),
+```
+
+- `export const model = {` starts an object literal: the one model, built when the file loads. That is what makes this version a singleton: there is exactly one, and importing it is all `main.js` needs to do.
+- `width: WIDTH, height: HEIGHT` are plain numbers that never change, there for the view to read, so the view draws whatever size the model says.
+- `row: computed(() => row.value)` hands out a read-only **`computed`** view of `row`. `() => row.value` is an arrow function (see [Terms](#terms)) that takes nothing and returns `row.value`. A computed has a getter for **`.value`** but no setter, so `model.row.value = 3` throws a `TypeError`. It is like handing out a `const model_t *`, except that C rejects the write at compile time and JavaScript only at run time. A computed is also lazy and cached: it recalculates only when read after one of its inputs changed.
+- `hex: computed(() => (row.value << 4) | col.value)` packs the position into one byte ([How it works](#how-it-works) has the worked example). Ordinary JavaScript numbers are 64-bit floats, but `<<` and `|` convert to 32-bit integers first, so the result matches C for these small values.
+
+```js
+  update(c) {    // model_update(); shorthand for update: function (c) {
+    if (c !== Cmd.NONE) cmd = c;
+    switch (cmd) {
+      case Cmd.LEFT:  col.value = (col.value + WIDTH - 1) % WIDTH; break;
+      case Cmd.RIGHT: col.value = (col.value + 1) % WIDTH;         break;
+      case Cmd.UP:    row.value = (row.value + HEIGHT - 1) % HEIGHT; break;
+      case Cmd.DOWN:  row.value = (row.value + 1) % HEIGHT;        break;
+    }
+  },
+};
+```
+
+- `update(c) { … }` is the model's one entry point for change, called by the tick in `main.js` as `model.update(controller.read())`; `c` is the new command, or `Cmd.NONE` if no key came this tick. **The syntax is shorthand for `update: function (c) { … }`**, a field whose value is a function, much like a function pointer in a C struct. It uses `row`, `col` and `cmd` straight from the file level, the way a C function uses its file's `static` variables, and it is the only code that writes them.
+- `if (c !== Cmd.NONE) cmd = c`: `!==` compares without converting types. Loose `!=` converts first, so `'1' != 1` is `false`; the strict form avoids such surprises.
+- `switch (cmd)` works as in C, `break` included, and a value that matches no `case` does nothing, also as in C.
+- STOP has no `case`, on purpose. Space puts `Cmd.STOP` in the controller's `pending` latch. On the next tick `update(Cmd.STOP)` stores it in `cmd`, since it is not `NONE`. The `switch` then finds no match, so `update` writes neither signal: the effect in `main.js` is not notified and the page is not redrawn. On the ticks after that `c` is `NONE`, so `cmd` stays `STOP` and the dot stays put until an arrow key replaces it.
+- `(col.value + WIDTH - 1) % WIDTH` steps left with wrap-around. JavaScript's `%` takes the sign of the left operand, as in C99, so a plain `(0 - 1) % 16` gives `-1`, not 15. Adding `WIDTH` first keeps the left side non-negative: `(0 + 16 - 1) % 16 = 15`, and `(5 + 16 - 1) % 16 = 4`. Writing a new number to **`.value`** is what notifies the effect in `main.js`.
+- The last two lines close `update` and the model object.
+
+</details>
+
 #### `view.js`
 
 <details>
@@ -231,7 +297,7 @@ Library names: **`html`** and **`render`** (lit-html), **`.value`** (Preact). In
 import { html, render } from 'lit-html';
 ```
 
-- `import { html, render } from 'lit-html'` takes two exported names from a module. A bare name like `lit-html` goes through the import map to a file in `vendor/`. **`html`** is lit-html's template tag and **`render`** writes a template into the page; both are explained below. This is the only file in its folder that imports lit-html, and it imports nothing else: even the grid size comes from the model it is given.
+- `import { html, render } from 'lit-html'` takes lit-html's two names, by bare name as in `model.js`. **`html`** is lit-html's template tag and **`render`** writes a template into the page; both are explained below. This is the only file in its folder that imports lit-html, and it imports nothing else: even the grid size comes from the model it is given.
 - lit-html 3.3.3 exports more than `html` and `render`: **`svg`** and **`mathml`**, template tags like `html` for SVG graphics and MathML math markup; **`nothing`**, a value that renders as empty; and **`noChange`**, a value that leaves a slot as it was, used mostly when writing directives (add-ons that control how a slot updates). It also exports `_$LH`, which is internal to Lit's own packages. The [Templates API page](https://lit.dev/docs/api/templates/) documents `html`, `svg`, `render` and `nothing`; the [lit-html 3.3.3 declaration file](https://cdn.jsdelivr.net/npm/lit-html@3.3.3/lit-html.d.ts) lists every export, types included. lit.dev writes imports as `from 'lit'`; the `lit` package re-exports `lit-html`, so the names are the same. Ready-made directives such as `repeat` live in separate `lit-html/directives/…` files, which this project has not vendored.
 
 ```js
@@ -264,68 +330,6 @@ export function viewUpdate(m, container) {   // view_update()
 
 - `export function viewUpdate(m, container)` draws the model into `container` once and returns: **`render`** writes `template(m)` there, and on later calls changes only what differs from the last frame. It is the only name other files see, so lit-html stays a detail of this file. Redrawing on every change is not its job: `main.js` calls it inside an `effect`.
 - It never imports a model; it only reads `m.width`, `m.height`, `m.row`, `m.col` and `m.hex` from whatever it is given.
-
-</details>
-
-#### `model.js`
-
-<details>
-<summary>Imports, file-level state, the one model, update, wrap-around math</summary>
-<br>
-
-Library names: **`signal`**, **`computed`** and **`.value`** (Preact).
-
-```js
-import { signal, computed } from '@preact/signals-core';
-import { Cmd } from './model-controller-common.js';
-```
-
-- `import { signal, computed } from '@preact/signals-core'` takes Preact's two building blocks, by bare name as in `view.js`. The model is built from these alone. Nothing in this file touches the page.
-- `'./model-controller-common.js'` is a relative path, which starts with `./` (this file's folder) or `../` (the folder above). Here it is this folder's own file, which provides `Cmd`.
-- @preact/signals-core 1.14.5 exports more: **`effect`** (used in each `main.js`); **`batch`**, which groups several writes so that effects run once, at the end; **`untracked`**, which reads signals without subscribing; **`action`**, which wraps a function so that each call runs batched and untracked; and **`createModel`**, a helper for building models out of signals. That last one is unrelated to `factory/model.js`'s own `createModel`, a plain function of the same name. It also exports the classes `Signal`, `Computed` and `Effect`, which `signal()`, `computed()` and `effect()` create. The [signals-core 1.14.5 README](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#guide--api) documents all of the functions except `action`, which it mentions only under `createModel`.
-
-```js
-const WIDTH = 16, HEIGHT = 8;               // grid size, owned by the model
-const row = signal(4), col = signal(7);     // file-level, like static variables in C
-let cmd = Cmd.STOP;                         // not shown on screen, so plain variable
-```
-
-- `const WIDTH = 16, HEIGHT = 8` is the grid size. Only the models define it, and the other versions repeat these two numbers on purpose. The view learns them from the model it is given, through `width` and `height` below.
-- `const row = signal(4), col = signal(7)` creates two **`signal`** boxes holding the start position. They sit at file level, outside any function, so they exist once, from the moment the file loads, like `static` variables in a C file. They are not exported, so nothing outside this file can reach them.
-- `let cmd = Cmd.STOP` declares a variable that can be reassigned, here holding the last direction; [How it works](#how-it-works), step 2, explains why it is a plain variable and not a signal.
-
-```js
-export const model = {
-  width: WIDTH, height: HEIGHT,             // the view draws whatever size the model says
-  row: computed(() => row.value),           // read-only to outsiders: const model_t *
-  col: computed(() => col.value),
-  hex: computed(() => (row.value << 4) | col.value),
-```
-
-- `export const model = {` starts an object literal: the one model, built when the file loads. That is what makes this version a singleton: there is exactly one, and importing it is all `main.js` needs to do.
-- `width: WIDTH, height: HEIGHT` are plain numbers that never change, there for the view to read, so the view draws whatever size the model says.
-- `row: computed(() => row.value)` hands out a read-only **`computed`** view of `row`. A computed has a getter for **`.value`** but no setter, so `model.row.value = 3` throws a `TypeError`. It is like handing out a `const model_t *`, except that C rejects the write at compile time and JavaScript only at run time. A computed is also lazy and cached: it recalculates only when read after one of its inputs changed.
-- `hex: computed(() => (row.value << 4) | col.value)` packs the position into one byte ([How it works](#how-it-works) has the worked example). Ordinary JavaScript numbers are 64-bit floats, but `<<` and `|` convert to 32-bit integers first, so the result matches C for these small values.
-
-```js
-  update(c) {    // model_update(); shorthand for update: function (c) {
-    if (c !== Cmd.NONE) cmd = c;
-    switch (cmd) {
-      case Cmd.LEFT:  col.value = (col.value + WIDTH - 1) % WIDTH; break;
-      case Cmd.RIGHT: col.value = (col.value + 1) % WIDTH;         break;
-      case Cmd.UP:    row.value = (row.value + HEIGHT - 1) % HEIGHT; break;
-      case Cmd.DOWN:  row.value = (row.value + 1) % HEIGHT;        break;
-    }
-  },
-};
-```
-
-- `update(c) { … }` is the model's one entry point for change, called by the tick in `main.js` as `model.update(controller.read())`; `c` is the new command, or `Cmd.NONE` if no key came this tick. **The syntax is shorthand for `update: function (c) { … }`**, a field whose value is a function, much like a function pointer in a C struct. It uses `row`, `col` and `cmd` straight from the file level, the way a C function uses its file's `static` variables, and it is the only code that writes them.
-- `if (c !== Cmd.NONE) cmd = c`: `!==` compares without converting types. Loose `!=` converts first, so `'1' != 1` is `false`; the strict form avoids such surprises.
-- `switch (cmd)` works as in C, `break` included, and a value that matches no `case` does nothing, also as in C.
-- STOP has no `case`, on purpose. Space puts `Cmd.STOP` in the controller's `pending` latch. On the next tick `update(Cmd.STOP)` stores it in `cmd`, since it is not `NONE`. The `switch` then finds no match, so `update` writes neither signal: the effect in `main.js` is not notified and the page is not redrawn. On the ticks after that `c` is `NONE`, so `cmd` stays `STOP` and the dot stays put until an arrow key replaces it.
-- `(col.value + WIDTH - 1) % WIDTH` steps left with wrap-around. JavaScript's `%` takes the sign of the left operand, as in C99, so a plain `(0 - 1) % 16` gives `-1`, not 15. Adding `WIDTH` first keeps the left side non-negative: `(0 + 16 - 1) % 16 = 15`, and `(5 + 16 - 1) % 16 = 4`. Writing a new number to **`.value`** is what notifies the effect in `main.js`.
-- The last two lines close `update` and the model object.
 
 </details>
 
@@ -432,7 +436,7 @@ effect(() => viewUpdate(model, document.querySelector('#app-singleton')));  // r
 ### `factory/`
 
 <details>
-<summary>model-controller-common.js, view.js, model.js, controller.js, main.js: main.js creates the parts</summary>
+<summary>model-controller-common.js, model.js, view.js, controller.js, main.js: main.js creates the parts</summary>
 <dl><dd>
 
 #### `model-controller-common.js`
@@ -442,54 +446,6 @@ effect(() => viewUpdate(model, document.querySelector('#app-singleton')));  // r
 <br>
 
 `factory/model-controller-common.js` is a byte-for-byte copy of `singleton/model-controller-common.js` (the first section in the singleton fold above): the same frozen `Cmd` table. Each folder has its own copy so that neither imports from the other. The boundary check fails if the two ever differ, so read that section.
-
-</details>
-
-#### `view.js`
-
-<details>
-<summary>What changes from the singleton: createView, the container kept per view</summary>
-<br>
-
-Library names: **`html`** and **`render`** (lit-html), **`.value`** (Preact). Only what differs from `singleton/view.js` is explained here.
-
-```js
-import { html, render } from 'lit-html';
-```
-
-- The same import as `singleton/view.js`.
-
-```js
-const range = n => [...Array(n).keys()];
-```
-
-- The same `range` helper.
-
-```js
-const template = m => html`
-  <table class="matrix">
-    ${range(m.height).map(r => html`<tr>
-      ${range(m.width).map(c => html`<td class=${r === m.row.value && c === m.col.value ? 'on' : ''}></td>`)}
-    </tr>`)}
-  </table>
-  <output>${m.hex.value.toString(16).toUpperCase().padStart(2, '0')}</output>`;
-```
-
-- The same template, so both versions draw the same grid and readout. It stays at file level: it is a function that holds no state, so every view can share it.
-
-```js
-export function createView(container) {     // each view keeps only where it draws
-  return {
-    update(m) {                             // view_update()
-      render(template(m), container);
-    },
-  };
-}
-```
-
-- `export function createView(container)` is a factory, the simplest one in this folder: the only thing each view keeps is `container`, the element it draws into, which `main.js` passes in once. `update` reaches it later through a closure (see [Terms](#terms)), so `main.js` no longer hands over the container on every redraw.
-- `update(m)` does what the singleton's `viewUpdate(m, container)` does. The model is still passed on every call, as in the C `view_update(mp)`. The last three lines close `update`, the returned object and `createView`.
-- `container` never changes, so a factory view gives each app no state the singleton view lacked: it changes how `main.js` wires things, not what each app remembers. The view's one piece of memory lives in lit-html: **`render`** stores the DOM it built on the container element itself, so each container already has its own, with the singleton's `viewUpdate` too. A factory view would start to matter once the view kept memory of its own, such as a blink timer or the dot's last position for an animation.
 
 </details>
 
@@ -544,6 +500,54 @@ export function createModel() {
 ```
 
 - `update(c)` is the same code as the singleton's. What changed is where `row`, `col` and `cmd` come from: they are the names it uses but does not declare, found in `createModel` through the closure, so each model's `update` changes only its own signals. The last three lines close `update`, the returned object and `createModel`.
+
+</details>
+
+#### `view.js`
+
+<details>
+<summary>What changes from the singleton: createView, the container kept per view</summary>
+<br>
+
+Library names: **`html`** and **`render`** (lit-html), **`.value`** (Preact). Only what differs from `singleton/view.js` is explained here.
+
+```js
+import { html, render } from 'lit-html';
+```
+
+- The same import as `singleton/view.js`.
+
+```js
+const range = n => [...Array(n).keys()];
+```
+
+- The same `range` helper.
+
+```js
+const template = m => html`
+  <table class="matrix">
+    ${range(m.height).map(r => html`<tr>
+      ${range(m.width).map(c => html`<td class=${r === m.row.value && c === m.col.value ? 'on' : ''}></td>`)}
+    </tr>`)}
+  </table>
+  <output>${m.hex.value.toString(16).toUpperCase().padStart(2, '0')}</output>`;
+```
+
+- The same template, so both versions draw the same grid and readout. It stays at file level: it is a function that holds no state, so every view can share it.
+
+```js
+export function createView(container) {     // each view keeps only where it draws
+  return {
+    update(m) {                             // view_update()
+      render(template(m), container);
+    },
+  };
+}
+```
+
+- `export function createView(container)` is a factory, the simplest one in this folder: the only thing each view keeps is `container`, the element it draws into, which `main.js` passes in once. `update` reaches it later through a closure (see [Terms](#terms)), so `main.js` no longer hands over the container on every redraw.
+- `update(m)` does what the singleton's `viewUpdate(m, container)` does. The model is still passed on every call, as in the C `view_update(mp)`. The last three lines close `update`, the returned object and `createView`.
+- `container` never changes, so a factory view gives each app no state the singleton view lacked: it changes how `main.js` wires things, not what each app remembers. The view's one piece of memory lives in lit-html: **`render`** stores the DOM it built on the container element itself, so each container already has its own, with the singleton's `viewUpdate` too. A factory view would start to matter once the view kept memory of its own, such as a blink timer or the dot's last position for an animation.
 
 </details>
 
@@ -657,7 +661,7 @@ effect(() => view.update(model));            // redraw only on change
 ### `class/`
 
 <details>
-<summary>model-controller-common.js, view.js, model.js, controller.js, main.js: main.js creates the parts with new</summary>
+<summary>model-controller-common.js, model.js, view.js, controller.js, main.js: main.js creates the parts with new</summary>
 <dl><dd>
 
 #### `model-controller-common.js`
@@ -667,6 +671,60 @@ effect(() => view.update(model));            // redraw only on change
 <br>
 
 `class/model-controller-common.js` is a byte-for-byte copy of `singleton/model-controller-common.js` (the first section in the singleton fold above), like the factory's. The boundary check fails if the copies ever differ, so read that section.
+
+</details>
+
+#### `model.js`
+
+<details>
+<summary>What changes from the factory: class Model, private fields, this</summary>
+<br>
+
+Library names: **`signal`**, **`computed`** and **`.value`** (Preact). Only what differs from `factory/model.js` is explained here.
+
+```js
+import { signal, computed } from '@preact/signals-core';
+import { Cmd } from './model-controller-common.js';
+```
+
+- The same imports as `factory/model.js`.
+
+```js
+const WIDTH = 16, HEIGHT = 8;               // grid size, owned by the model
+```
+
+- The same grid size, again at file level because it never changes.
+
+```js
+export class Model {
+  #row = signal(4); #col = signal(7);       // private (#), like fields of model_t
+  #cmd = Cmd.STOP;                          // not shown on screen, so plain variable
+  width = WIDTH; height = HEIGHT;           // the view draws whatever size the model says
+  row = computed(() => this.#row.value);    // read-only to outsiders: const model_t *
+  col = computed(() => this.#col.value);
+  hex = computed(() => (this.#row.value << 4) | this.#col.value);
+```
+
+- `export class Model {` starts a class (see [Terms](#terms)): a blueprint that `main.js` turns into a model with `new Model()`. It plays the part of `createModel`.
+- Each `name = value;` in the class body declares a field. `new Model()` runs every initializer again, in order, for each new model, so each model gets its own two signals and its own `#cmd`, just as each `createModel()` call got its own local variables.
+- `#row`, `#col` and `#cmd` are private fields, the class's replacement for the factory's closure variables. Code outside the class body cannot even name them: `model.#row` there is a `SyntaxError`, and the browser refuses to load that file.
+- `width`, `height`, `row`, `col` and `hex` are public fields, the same five the factory's object has, so the view reads either one the same way.
+- `computed(() => this.#row.value)`: an arrow function has no `this` of its own; it uses the `this` of the code around it. Field initializers run inside `new`, where `this` is the new model, so each computed reads its own model's `#row`.
+
+```js
+  update(c) {    // model_update(); a method on Model.prototype, shared by all models
+    if (c !== Cmd.NONE) this.#cmd = c;
+    switch (this.#cmd) {
+      case Cmd.LEFT:  this.#col.value = (this.#col.value + WIDTH - 1) % WIDTH; break;
+      case Cmd.RIGHT: this.#col.value = (this.#col.value + 1) % WIDTH;         break;
+      case Cmd.UP:    this.#row.value = (this.#row.value + HEIGHT - 1) % HEIGHT; break;
+      case Cmd.DOWN:  this.#row.value = (this.#row.value + 1) % HEIGHT;        break;
+    }
+  }
+}
+```
+
+- `update(c)` is the factory's rule with each state name written as `this.#name`: the private field of the model it was called on. It is a method, so unlike the factory's `update` it exists once, on the prototype, shared by every model. Unlike in the other two versions, `update(c) {` here is not shorthand for `update: function (c) {`: a class body does not allow that colon form, and it is a `SyntaxError`. `this` tells it which model's fields to use, the way `mp` does in C's `model_update(mp, c)`. The last two lines close `update` and the class.
 
 </details>
 
@@ -707,7 +765,7 @@ export class View {
   #container;                               // each view keeps only where it draws
 ```
 
-- `export class View {` starts a class (see [Terms](#terms)): a blueprint that `main.js` turns into a view with `new View(container)`. It plays the part of `createView`.
+- `export class View {` plays the part of `createView`, and `new View(container)` the part of `createView(container)`.
 - `#container;` declares a private field. Each view gets its own `#container`, which starts as `undefined` and which only code inside these braces can read or write. It replaces the factory's closure variable `container`.
 
 ```js
@@ -726,60 +784,6 @@ export class View {
 ```
 
 - `update(m)` is a method: written once, stored on the class's prototype, and shared by every view. When `main.js` calls `view.update(model)`, `this` is `view`, so `this.#container` is that view's own container. The last two lines close `update` and the class.
-
-</details>
-
-#### `model.js`
-
-<details>
-<summary>What changes from the factory: class Model, private fields, this</summary>
-<br>
-
-Library names: **`signal`**, **`computed`** and **`.value`** (Preact). Only what differs from `factory/model.js` is explained here.
-
-```js
-import { signal, computed } from '@preact/signals-core';
-import { Cmd } from './model-controller-common.js';
-```
-
-- The same imports as `factory/model.js`.
-
-```js
-const WIDTH = 16, HEIGHT = 8;               // grid size, owned by the model
-```
-
-- The same grid size, again at file level because it never changes.
-
-```js
-export class Model {
-  #row = signal(4); #col = signal(7);       // private (#), like fields of model_t
-  #cmd = Cmd.STOP;                          // not shown on screen, so plain variable
-  width = WIDTH; height = HEIGHT;           // the view draws whatever size the model says
-  row = computed(() => this.#row.value);    // read-only to outsiders: const model_t *
-  col = computed(() => this.#col.value);
-  hex = computed(() => (this.#row.value << 4) | this.#col.value);
-```
-
-- `export class Model {` plays the part of `createModel`, and `new Model()` the part of `createModel()`.
-- Each `name = value;` in the class body declares a field. `new Model()` runs every initializer again, in order, for each new model, so each model gets its own two signals and its own `#cmd`, just as each `createModel()` call got its own local variables.
-- `#row`, `#col` and `#cmd` are private fields, the class's replacement for the factory's closure variables. Code outside the class body cannot even name them: `model.#row` there is a `SyntaxError`, and the browser refuses to load that file.
-- `width`, `height`, `row`, `col` and `hex` are public fields, the same five the factory's object has, so the view reads either one the same way.
-- `computed(() => this.#row.value)`: an arrow function has no `this` of its own; it uses the `this` of the code around it. Field initializers run inside `new`, where `this` is the new model, so each computed reads its own model's `#row`.
-
-```js
-  update(c) {    // model_update(); a method on Model.prototype, shared by all models
-    if (c !== Cmd.NONE) this.#cmd = c;
-    switch (this.#cmd) {
-      case Cmd.LEFT:  this.#col.value = (this.#col.value + WIDTH - 1) % WIDTH; break;
-      case Cmd.RIGHT: this.#col.value = (this.#col.value + 1) % WIDTH;         break;
-      case Cmd.UP:    this.#row.value = (this.#row.value + HEIGHT - 1) % HEIGHT; break;
-      case Cmd.DOWN:  this.#row.value = (this.#row.value + 1) % HEIGHT;        break;
-    }
-  }
-}
-```
-
-- `update(c)` is the factory's rule with each state name written as `this.#name`: the private field of the model it was called on. It is a method, so unlike the factory's `update` it exists once, on the prototype, shared by every model. Unlike in the other two versions, `update(c) {` here is not shorthand for `update: function (c) {`: a class body does not allow that colon form, and it is a `SyntaxError`. `this` tells it which model's fields to use, the way `mp` does in C's `model_update(mp, c)`. The last two lines close `update` and the class.
 
 </details>
 

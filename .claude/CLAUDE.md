@@ -32,9 +32,9 @@ Goal: as simple as possible, without saying anything false.
 
 ## Learning style
 
-The user finds the hard part of learning any new tech to be getting a "hello world" working and learning the syntax and patterns to build one small "house". Scaling from there to a "city" is easy for them. So when teaching or planning study (as in `STUDY_PLAN.md`):
+The user finds the hard part of learning any new tech to be getting a "hello world" working and learning the syntax and patterns to build one small "house". Scaling from there to a "city" is easy for them. So when teaching or planning study (as in `STUDY_PLAN_1.md` and `STUDY_PLAN_2.md`):
 
-- Give each step two parts: first the sections to read and absorb, in order; then a small runnable build, hint first and solution folded.
+- Give each step two parts: first the sections to read and absorb, in order; then a small runnable build, hint first and solution folded. Exception, at the user's request: `STUDY_PLAN_1.md` prints each build in full and explains it, with no exercises.
 - Spend the detail on getting the first small thing working. Don't spend effort on scaling up; the user does that on their own.
 - Mention a C parallel only in passing, where it helps. Don't map everything to `C/`.
 
@@ -72,7 +72,8 @@ The app is split like the C original in `C/`: model, view, controller, and a mai
 - `.gitignore`, `.gitattributes` — ignore rules; LF line endings.
 - `README.md` — front page: what this is, how to run it, links to the other docs; short and unfolded.
 - `HOW_AND_WALKTHROUGH.md` — how it works, the code walkthrough, the three patterns compared, the Claude Code and Debian setup. The walkthrough copies each source file in full, so update it in the same change as the file; the two `model-controller-common.js` copies only point to the singleton one.
-- `STUDY_PLAN.md` — the learner's read-then-build path. It quotes the source and links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when either moves.
+- `STUDY_PLAN_1.md` — the first study path: one form app (name, currency, bonds, savings, total) built five times in `~/money-app`, outside the repo: plain DOM, lit-html, `signal` and `effect`, `computed`, `batch`. It links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when they move.
+- `STUDY_PLAN_2.md` — the learner's read-then-build path. It quotes the source and links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when either moves.
 - `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo; read it before working on that.
 
 ## Conventions

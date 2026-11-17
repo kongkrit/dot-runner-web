@@ -1,4 +1,6 @@
-# Study plan
+# Study plan 2: the dot runner
+
+New to reading and writing a web page from JavaScript? Do [STUDY_PLAN_1.md](STUDY_PLAN_1.md) first: it builds one small form app from plain DOM code up to lit-html and Preact Signals.
 
 The goal: by the end you can build a small Preact Signals + lit-html app on your own. Each step has two parts: **read** the listed sections, in order (most are in [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md)), then **build** something small and see it run. The steps go: a hello world from a blank folder, built twice (lit-html alone, then with Preact Signals added), then one small feature added to the singleton, factory and class versions in turn, then an app of your own. The code comments name the C counterpart of each piece, if that helps.
 
@@ -140,8 +142,8 @@ The same four blocks, split into the repo's five files. Run the repo (`uv run --
 3. [One tick, step by step](HOW_AND_WALKTHROUGH.md#one-tick-step-by-step): what happens between a key press and the redraw.
 4. [Code walkthrough → `singleton/`](HOW_AND_WALKTHROUGH.md#singleton), all five files in the walkthrough's order:
    - `model-controller-common.js`: the `Cmd` table;
-   - `view.js`: tagged templates and slots, the heart of lit-html;
    - `model.js`: `signal`, `computed` and the one rule that changes state;
+   - `view.js`: tagged templates and slots, the heart of lit-html;
    - `controller.js`: the key latch;
    - `main.js`: the wiring and the redraw `effect`.
 

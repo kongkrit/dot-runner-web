@@ -17,5 +17,6 @@ Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. 
 ## Documents
 
 - [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) — how the app works, every source file explained part by part, the three patterns compared, and the Claude Code and Debian setup.
-- [STUDY_PLAN.md](STUDY_PLAN.md) — a read-then-build path: a hello world, a step counter in each version, then an app of your own.
+- [STUDY_PLAN_1.md](STUDY_PLAN_1.md) — start here: one small form app built five times, from plain DOM code to lit-html and Preact Signals (`signal`, `effect`, `computed`, `batch`).
+- [STUDY_PLAN_2.md](STUDY_PLAN_2.md) — a read-then-build path: a hello world, a step counter in each version, then an app of your own.
 - [TEMPLATE_PROPOSAL.md](TEMPLATE_PROPOSAL.md) — a proposal (not started) to turn this setup into a reusable MVC template repo.
