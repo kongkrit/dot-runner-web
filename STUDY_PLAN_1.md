@@ -368,7 +368,7 @@ effect(() => {
 });
 ```
 
-- `computed(fn)` makes a read-only signal whose value is `fn`'s result. It runs `fn` again only when one of the signals `fn` read has changed, and only when someone reads its `.value`; otherwise `.value` returns the stored result. `bondsText` and `totalText` hold the two sentences that `updateView` used to build. They sit with the model, because they are worked out from its data.
+- `computed(fn)` makes a read-only signal whose value is `fn`'s result. It runs `fn` again only when one of the signals `fn` read has changed, and only when someone reads its `.value`; otherwise `.value` returns the stored result. `bondsText` and `totalText` hold the two sentences that `updateView` used to build. They sit after the model for now; Build 4 moves each next to the row that shows it.
 - `updateView`'s two `textContent` lines now read `bondsText.value` and `totalText.value`. The effect is subscribed to the two computeds, and through them to the signals they read.
 - `bondsText` logs each time it recalculates. With a second statement, its arrow function needs braces and a `return` (see *=> (arrow function)* in Terms).
 - What `computed` gives you:
@@ -502,13 +502,6 @@ function updateModel({ userName = model.userName.value, currency = model.currenc
   });
 }
 
-// Derived values
-const bondsText = computed(() => {
-  console.log('bondsText');
-  return `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
-});
-const totalText = computed(() => `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`);
-
 // --------------- name field
 const nameBox = document.querySelector('#name');
 nameBox.addEventListener('input', () => updateModel({ userName: nameBox.value }));
@@ -521,6 +514,10 @@ currencyBox.addEventListener('change', () => updateModel({ currency: currencyBox
 const addBondButton = document.querySelector('#add-bond');
 const bondsOut = document.querySelector('#bonds');
 addBondButton.addEventListener('click', () => updateModel({ bonds: model.bonds.value + 1 }));
+const bondsText = computed(() => {
+  console.log('bondsText');
+  return `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
+});
 effect(() => {
   console.log('bonds');
   bondsOut.textContent = bondsText.value;
@@ -545,6 +542,7 @@ effect(() => {
 
 // --------------- total line
 const totalOut = document.querySelector('#total');
+const totalText = computed(() => `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`);
 effect(() => {
   console.log('total');
   totalOut.textContent = totalText.value;
@@ -552,7 +550,8 @@ effect(() => {
 ```
 
 - A **component** is one piece of the page together with the code that serves it: finding its elements, listening to them, and keeping them up to date. Until now the file was grouped by kind of code: all the lookups, then the view (`updateView`), then all the listeners, so following the savings box meant reading four places. Now each piece has one section, between `// ---------------` lines, and everything about it sits there.
-- The model, `updateModel` and the derived values stay at the top, shared. Their rules are about the data, not about any one box: "negative counts as 0" holds whichever box or button the number came from.
+- The model and `updateModel` stay at the top, shared. Their rules are about the data, not about any one box: "negative counts as 0" holds whichever box or button the number came from.
+- `bondsText` and `totalText` moved into the bonds row and the total line. Each is one row's wording, and only that row's effect reads it. Each sits above its effect, because an effect's first run happens as soon as it is created and reads the computed then.
 - `updateView` and its single effect are gone. Each section that shows something has its own effect, which logs its name: the bonds row, the savings field and the total line. The sections that only read input (name, currency, rich and poor) have none.
 - Each effect re-runs only when a signal it read changes. Typing a name changes `userName`, which only `totalText` reads, so only the total line's effect runs; Build 3's single effect rewrote the bonds sentence too.
 - **The savings effect reads `model.savings.value` first,** before the `if`. With the read inside the `if`, a run while you type in the box reads no signal at all, because the `if` is false, so the effect stops depending on savings and never runs again: type `5`, click `rich`, and the box stays at `5` while the total says 98765. Reading first keeps the dependency whatever the `if` decides.
@@ -561,8 +560,9 @@ effect(() => {
 What changed from Build 3:
 
 1. The `DOM inputs` and `DOM outputs` blocks are gone; each lookup moved into the section that uses it.
-2. `updateView` and its effect are gone; the bonds row, the savings field and the total line each have their own effect.
-3. The savings field reads its signal first, and has a `blur` listener.
+2. The `Derived values` block is gone; `bondsText` moved into the bonds row and `totalText` into the total line.
+3. `updateView` and its effect are gone; the bonds row, the savings field and the total line each have their own effect.
+4. The savings field reads its signal first, and has a `blur` listener.
 
 **Try it,** with the console open:
 
@@ -634,13 +634,6 @@ function updateModel({ userName = model.userName.value, currency = model.currenc
   });
 }
 
-// Derived values
-const bondsText = computed(() => {
-  console.log('bondsText');
-  return `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
-});
-const totalText = computed(() => `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`);
-
 // --------------- name field
 function onName(e) { updateModel({ userName: e.target.value }); }
 render(html`<label>Your name: <input @input=${onName}></label>`,
@@ -659,6 +652,10 @@ render(html`<label>Currency:
 // --------------- bonds row
 const bondsRow = document.querySelector('#bonds-row');
 function onAddBond() { updateModel({ bonds: model.bonds.value + 1 }); }
+const bondsText = computed(() => {
+  console.log('bondsText');
+  return `we have ${model.bonds.value} thousand${model.bonds.value === 1 ? '' : 's'} in bonds`;
+});
 effect(() => {
   console.log('bonds');
   render(html`<button @click=${onAddBond}>+1</button> <output>${bondsText.value}</output>`, bondsRow);
@@ -685,6 +682,7 @@ effect(() => {
 
 // --------------- total line
 const totalLine = document.querySelector('#total-line');
+const totalText = computed(() => `${model.userName.value} has a total of ${model.currency.value} ${model.bonds.value * 1000 + model.savings.value}`);
 effect(() => {
   console.log('total');
   render(html`Total: <output>${totalText.value}</output>`, totalLine);
