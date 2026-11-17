@@ -70,9 +70,11 @@ The app is split like the C original in `C/`: model, view, controller, and a mai
 - `.claude/skills/wrapup/SKILL.md` — `/wrapup`: rewrites `.claude/PROGRESS.md`, the latest session handoff (older ones are in its git history), then commits.
 - `.claude/rules/markdown.md` — folding rules for HOW_AND_WALKTHROUGH.md and docs/, loaded automatically for those files.
 - `.gitignore`, `.gitattributes` — ignore rules; LF line endings.
+- `.temp/` — scratch space for the study plans' working folders (`money-app/`, `hello-signals/`). Git ignores all of it except `.placeholder`, and `.checks/boundaries.py` skips it, as it skips every dot-folder.
+- `.vscode/settings.json` — shared VS Code workspace settings, tracked: hides `.temp/.placeholder` from the Explorer.
 - `README.md` — front page: what this is, how to run it, links to the other docs; short and unfolded.
 - `HOW_AND_WALKTHROUGH.md` — how it works, the code walkthrough, the three patterns compared, the Claude Code and Debian setup. The walkthrough copies each source file in full, so update it in the same change as the file; the two `model-controller-common.js` copies only point to the singleton one.
-- `STUDY_PLAN_1.md` — the first study path: one form app (name, currency, bonds, savings, total) built five times in `~/money-app`, outside the repo: plain DOM, lit-html, `signal` and `effect`, `computed`, `batch`. It links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when they move.
+- `STUDY_PLAN_1.md` — the first study path: one form app (name, currency, bonds, savings, total) built five times in `.temp/money-app`: plain DOM, lit-html, `signal` and `effect`, `computed`, `batch`. It links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when they move.
 - `STUDY_PLAN_2.md` — the learner's read-then-build path. It quotes the source and links HOW_AND_WALKTHROUGH.md headings, so update it in the same change when either moves.
 - `TEMPLATE_PROPOSAL.md` — proposal (not started) to extract this setup into a reusable MVC template repo; read it before working on that.
 

@@ -28,13 +28,13 @@ The app's state is four values: `name`, `currency`, `bonds` and `savings`. Every
 From the repo root:
 
 ```bash
-mkdir ~/money-app && cp -r vendor ~/money-app/
+mkdir -p .temp/money-app && cp -r vendor .temp/money-app/
 ```
 
-Build 0 uses no library; Builds 1–4 load lit-html and Preact Signals from that copy of `vendor/`. To run any build:
+`.temp/` is scratch space inside the repo: git ignores everything in it except its `.placeholder` file, and the boundary check skips it, so your builds are neither committed nor checked. Build 0 uses no library; Builds 1–4 load lit-html and Preact Signals from that copy of `vendor/`. To run any build, from the repo root:
 
 ```bash
-cd ~/money-app && uv run --no-project python -m http.server 8001
+cd .temp/money-app && uv run --no-project python -m http.server 8001
 ```
 
 Then open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo. After you replace a file, reload the page; if a change doesn't show, hard-reload with Ctrl+Shift+R (Mac: Cmd+Shift+R). The browser's console, where `console.log` prints, is under F12 → Console. It may also show one `404` error for `favicon.ico`: browsers ask every site for a tab icon, and this one has none. It is harmless.
@@ -47,7 +47,7 @@ Then open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo. Afte
 2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *semantic HTML*, *=> (arrow function)*.
 3. [Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml): tags, attributes and the module script. Skip the import map and the CSS; this build has neither.
 
-**Code:** `~/money-app/index.html`:
+**Code:** `.temp/money-app/index.html`:
 
 ```html
 <!doctype html>
@@ -79,7 +79,7 @@ Then open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo. Afte
 - `id="…"` gives each element a name that is unique in the page, so `main.js` can find it. There is no `<style>`, so everything has the browser's default look.
 - `<script type="module">` runs `main.js` after the whole page has been parsed, so every element exists by then.
 
-`~/money-app/main.js`:
+`.temp/money-app/main.js`:
 
 ```js
 const nameBox = document.querySelector('#name');
@@ -159,7 +159,7 @@ The pattern: the state lives in four variables, and the page holds a copy that t
 2. [Code walkthrough → `singleton/`](HOW_AND_WALKTHROUGH.md#singleton) → `view.js`: the notes on `` html`…` `` and `render`. Skip the grid details.
 3. lit.dev [Expressions](https://lit.dev/docs/templates/expressions/): [child](https://lit.dev/docs/templates/expressions/#child-expressions), [property](https://lit.dev/docs/templates/expressions/#property-expressions) and [event listener](https://lit.dev/docs/templates/expressions/#event-listener-expressions) expressions. lit.dev writes its examples inside Lit components, with `this.` in front of each value; here the values are plain variables.
 
-**Code:** replace `~/money-app/index.html` with this shell, which stays the same through Build 4:
+**Code:** replace `.temp/money-app/index.html` with this shell, which stays the same through Build 4:
 
 ```html
 <!doctype html>
@@ -181,7 +181,7 @@ The pattern: the state lives in four variables, and the page holds a copy that t
 </html>
 ```
 
-Replace `~/money-app/main.js` with:
+Replace `.temp/money-app/main.js` with:
 
 ```js
 import { html, render } from 'lit-html';
@@ -248,7 +248,7 @@ What changed from Build 0:
 1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *signal*, *effect*.
 2. The signals-core README: [`signal(initialValue)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#signalinitialvalue) and [`effect(fn)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#effectfn), the first example of each.
 
-**Code:** replace `~/money-app/main.js` with:
+**Code:** replace `.temp/money-app/main.js` with:
 
 ```js
 import { signal, effect } from '@preact/signals-core';
@@ -317,7 +317,7 @@ What changed from Build 1:
 1. [Terms](HOW_AND_WALKTHROUGH.md#terms): *computed*.
 2. The signals-core README: [`computed(fn)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#computedfn).
 
-**Code:** replace `~/money-app/main.js` with:
+**Code:** replace `.temp/money-app/main.js` with:
 
 ```js
 import { signal, computed, effect } from '@preact/signals-core';
@@ -389,7 +389,7 @@ What changed from Build 2:
 
 **Read:** the signals-core README: [`batch(fn)`](https://github.com/preactjs/signals/blob/%40preact/signals-core%401.14.5/packages/core/README.md#batchfn), its first example.
 
-**Code:** replace `~/money-app/main.js` with:
+**Code:** replace `.temp/money-app/main.js` with:
 
 ```js
 import { signal, computed, effect, batch } from '@preact/signals-core';
@@ -447,4 +447,4 @@ What changed from Build 3: `batch` joined the import, and `setMoney` wraps its t
 
 ## Next
 
-[STUDY_PLAN_2.md](STUDY_PLAN_2.md) uses the same tools on the dot runner and splits an app into model, view and controller. Its Step 0 builds a lit-html and Preact Signals hello world, which repeats Builds 1 and 2 here, so you can go through it quickly. Delete `~/money-app` when you no longer need it.
+[STUDY_PLAN_2.md](STUDY_PLAN_2.md) uses the same tools on the dot runner and splits an app into model, view and controller. Its Step 0 builds a lit-html and Preact Signals hello world, which repeats Builds 1 and 2 here, so you can go through it quickly. Delete `.temp/money-app` when you no longer need it.

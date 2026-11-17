@@ -25,13 +25,16 @@ $RECYCLE.BIN/
 .Trash-*
 .nfs*
 
+# Temp space: the study plans' working folders; only the placeholder is tracked
+.temp/*
+!.temp/.placeholder
+
 # Python (uv)
 __pycache__/
 *.py[cod]
 .venv/
 
-# Editor / IDE
-.vscode/settings.json
+# Editor / IDE (.vscode/settings.json is tracked: shared workspace settings)
 .idea/
 *.swp
 *.swo

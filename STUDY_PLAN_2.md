@@ -16,15 +16,15 @@ You can, but it costs more than it saves:
 
 ## Step 0: hello world from a blank folder
 
-The same click counter, built twice: first with lit-html alone, to learn how a page is drawn, then with Preact Signals added, so that it redraws by itself. Both builds live outside the repo, so nothing here is checked against the repo's rules.
+The same click counter, built twice: first with lit-html alone, to learn how a page is drawn, then with Preact Signals added, so that it redraws by itself. Both builds live in `.temp/`, which git ignores and the boundary check skips, so nothing here is committed or checked against the repo's rules.
 
 **Setup.** From the repo root:
 
 ```bash
-mkdir ~/hello-signals && cp -r vendor ~/hello-signals/
+mkdir -p .temp/hello-signals && cp -r vendor .temp/hello-signals/
 ```
 
-`~/hello-signals/index.html`, used by both builds:
+`.temp/hello-signals/index.html`, used by both builds:
 
 ```html
 <!doctype html>
@@ -56,7 +56,7 @@ The import map names both libraries from the start, so this file never changes. 
 2. [Terms](HOW_AND_WALKTHROUGH.md#terms): *DOM*, *import map*, *=> (arrow function)*, *html*, *container*, *render*. Skip the rest for now.
 3. [Code walkthrough → `index.html`](HOW_AND_WALKTHROUGH.md#indexhtml): the import map and module scripts. The `index.html` above is a trimmed copy.
 
-**Build:** `~/hello-signals/main.js`:
+**Build:** `.temp/hello-signals/main.js`:
 
 ```js
 import { html, render } from 'lit-html';
@@ -69,7 +69,7 @@ const template = () => html`
 render(template(), document.querySelector('#app'));
 ```
 
-Run `cd ~/hello-signals && uv run --no-project python -m http.server 8001` and open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo.
+Run `cd .temp/hello-signals && uv run --no-project python -m http.server 8001` and open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo.
 
 - `` html`…` `` is a template: HTML in backticks, with `${…}` slots that lit-html fills. It only describes the page; it changes nothing.
 - `template` is a function, so each call reads the current `count`. Written as `` const template = html`…` `` it would read `count` once, at 0, and keep that.
@@ -106,7 +106,7 @@ Build 1 works only because every change remembers to call `draw()`. Preact Signa
 
 **Read:** [Terms](HOW_AND_WALKTHROUGH.md#terms): *signal*, *effect*.
 
-**Build:** replace `~/hello-signals/main.js` with:
+**Build:** replace `.temp/hello-signals/main.js` with:
 
 ```js
 import { signal, effect } from '@preact/signals-core';
@@ -300,7 +300,7 @@ Optional: build the two dots here too. You'll need a `constructor(startRow, star
 1. [Which to use](HOW_AND_WALKTHROUGH.md#which-to-use): which pattern fits which part.
 2. The Architecture rules in [.claude/CLAUDE.md](.claude/CLAUDE.md): the repo's MVC rules, which become your checklist.
 
-**Build:** back in `~/hello-signals`, build something of your own and split it into `model.js`, `view.js`, `controller.js` and `main.js` the way the repo does. Use the factory style, the walkthrough's default for parts you may want several of. Ideas: a traffic light that cycles on a timer, or a counter driven by `+` and `-` keys. `.checks/boundaries.py` checks only this repo's folders, not `~/hello-signals`, so you check the rules by hand.
+**Build:** back in `.temp/hello-signals`, build something of your own and split it into `model.js`, `view.js`, `controller.js` and `main.js` the way the repo does. Use the factory style, the walkthrough's default for parts you may want several of. Ideas: a traffic light that cycles on a timer, or a counter driven by `+` and `-` keys. `.checks/boundaries.py` skips `.temp/`, so you check the rules by hand.
 
 ## Cleaning up
 

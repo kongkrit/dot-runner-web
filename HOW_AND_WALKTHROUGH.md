@@ -1035,7 +1035,8 @@ Use a **class** for the same jobs as a factory when there will be very many copi
 | `.claude/PROGRESS.md` | Latest session handoff, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`. |
 | `.checks/boundaries.py` | Checks the MVC boundaries in CLAUDE.md's Architecture rules: who may import what, each folder only from itself; browser globals and `effect` only in `main.js`; signal writes only in `model.js`; `model.update` and the view used only from `main.js`; file-level changing state, and `static` class fields (shared by every instance), only in `singleton/`; the `model-controller-common.js` copies identical. Run `uv run --no-project python .checks/boundaries.py`. The `PostToolUse` hook runs it after every Edit or Write and tells Claude Code what it broke; it can't undo the edit, and shell edits skip it. |
 | `.checks/stop-hook.sh` | The `Stop` hook: runs the same check when Claude Code tries to finish a turn and, on a violation, sends it back to fix the code first. If the violation survives one round, it lets the turn end but shows you a warning, so it can't loop forever. |
-| `.gitignore` | OS cruft, Python/uv venv, editor files. |
+| `.gitignore` | OS cruft, Python/uv venv, editor files, and everything in `.temp/` (the study plans' working folders) except `.placeholder`. |
+| `.vscode/settings.json` | VS Code workspace settings, tracked so they are shared: hides `.temp/.placeholder` from the Explorer. |
 | `.gitattributes` | LF line endings; binary file types; no line diffs for the minified `vendor/` files. |
 
 Personal overrides go in `.claude/settings.local.json`, which is gitignored ([settings docs](https://code.claude.com/docs/en/settings)).
