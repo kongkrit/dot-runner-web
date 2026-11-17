@@ -1,3 +1,5 @@
+[README.md](README.md) · [STUDY_PLAN_1.md](STUDY_PLAN_1.md) · [STUDY_PLAN_2.md](STUDY_PLAN_2.md)
+
 # How it works and code walkthrough
 
 The companion to [README.md](README.md), which says what the app is and how to run it. This file explains how the app works, walks through every source file in full, compares the singleton, factory and class versions, and describes the Claude Code and Debian setup.

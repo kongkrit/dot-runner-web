@@ -1,3 +1,5 @@
+[README.md](README.md) · [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) · [STUDY_PLAN_2.md](STUDY_PLAN_2.md)
+
 # Study plan 1: one form, five builds
 
 The goal: by the end you know how a web page reads what the user typed and writes results back, first by hand and then with lit-html and Preact Signals. You build one small form app five times, and each build adds one idea:

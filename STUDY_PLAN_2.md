@@ -1,3 +1,5 @@
+[README.md](README.md) · [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) · [STUDY_PLAN_1.md](STUDY_PLAN_1.md)
+
 # Study plan 2: the dot runner
 
 New to reading and writing a web page from JavaScript? Do [STUDY_PLAN_1.md](STUDY_PLAN_1.md) first: it builds one small form app from plain DOM code up to lit-html and Preact Signals.
