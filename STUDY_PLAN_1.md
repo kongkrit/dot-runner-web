@@ -21,7 +21,7 @@ Each build has three parts: **read** the listed sections, in order; then copy th
 - **Savings:** a number box that refuses negative numbers.
 - **Total:** "*name* has a total of *currency* *bonds × 1000 + savings*", for example "Ann has a total of EUR 98765".
 
-The app's state is four values: `name`, `currency`, `bonds` and `savings`. Everything else on screen is worked out from them.
+The app's state is four values: `userName`, `currency`, `bonds` and `savings`. Everything else on screen is worked out from them.
 
 ## Setup
 
@@ -91,11 +91,11 @@ const savingsBox = document.querySelector('#savings');
 const bondsOut = document.querySelector('#bonds');
 const totalOut = document.querySelector('#total');
 
-let name = '', currency = 'USD', bonds = 0, savings = 0;
+let userName = '', currency = 'USD', bonds = 0, savings = 0;
 
 function draw() {
   bondsOut.textContent = `we have ${bonds} thousand${bonds === 1 ? '' : 's'} in bonds`;
-  totalOut.textContent = `${name} has a total of ${currency} ${bonds * 1000 + savings}`;
+  totalOut.textContent = `${userName} has a total of ${currency} ${bonds * 1000 + savings}`;
 }
 
 function setMoney(b, s) {
@@ -105,7 +105,7 @@ function setMoney(b, s) {
   draw();
 }
 
-nameBox.addEventListener('input', () => { name = nameBox.value; draw(); });
+nameBox.addEventListener('input', () => { userName = nameBox.value; draw(); });
 currencyBox.addEventListener('change', () => { currency = currencyBox.value; draw(); });
 addBondButton.addEventListener('click', () => { bonds++; draw(); });
 richButton.addEventListener('click', () => setMoney(98, 765));
@@ -122,14 +122,14 @@ draw();
 ```
 
 - `document.querySelector('#name')` returns the first element that matches the CSS selector `#name`: the element with `id="name"`. Each `const` holds a reference to the live element, not a copy, much like a pointer to a memory-mapped register: reading its `value` gives what the box shows now, and writing it changes the page. Where the analogy breaks down: the screen shows the change only after your code returns, not at the moment of the write.
-- `let name = '', currency = 'USD', bonds = 0, savings = 0` declares the four state values on one line, as `int a = 0, b = 0;` does in C. They match how the page starts: an empty name box, and USD, the first option.
+- `let userName = '', currency = 'USD', bonds = 0, savings = 0` declares the four state values on one line, as `int a = 0, b = 0;` does in C. They match how the page starts: an empty name box, and USD, the first option. It is `userName`, not `name`, because browsers already have a global `name` (`window.name`, the tab's name), which VS Code marks as deprecated wherever a plain `name` looks like it.
 - `` `we have ${bonds} thousand…` `` is a template literal: a string in backticks, where `${expr}` inserts the value of any expression. `bonds === 1 ? '' : 's'` adds the "s" except when bonds is 1. `===` is equality without type conversion, and `? :` works as in C.
 
 ### Reading the DOM
 
 Reading means two things: getting a value out of an element, and learning when it changed. For the second, you ask the browser to call a function. `element.addEventListener('input', fn)` calls `fn` each time an `input` event happens on that element. Your code never polls; it waits to be called, like an interrupt handler.
 
-- **`name`:** `nameBox.value` is the text in the box, always a string. The `input` event fires on every change to that text (each key press, paste or delete), so the total follows as you type. The `change` event would fire only when you leave the box.
+- **`userName`:** `nameBox.value` is the text in the box, always a string. The `input` event fires on every change to that text (each key press, paste or delete), so the total follows as you type. The `change` event would fire only when you leave the box.
 - **`currency`:** `currencyBox.value` is the value of the chosen option. A `<select>` fires `change` as soon as a new option is picked.
 - **The `+1`, `rich` and `poor` buttons:** a button has no value to read. You read it by listening for `click`, which fires for a mouse click, and also for Enter or Space while the button has keyboard focus.
 - **`savings`:** `savingsBox.value` is a string here too, even in a number box: `"12"`, not `12`. Adding a string to a number joins them as text, so `98000 + "12"` is `"9800012"`. `savingsBox.valueAsNumber` gives the number `12` instead, or `NaN` ("not a number") when the box holds no valid number, as when it is empty or holds only a `-`. The handler keeps `n` only when `n >= 0`. That one test rejects both negative numbers and `NaN`, because every `<`, `>`, `<=` or `>=` comparison with `NaN` is false.
@@ -186,7 +186,7 @@ Replace `.temp/money-app/main.js` with:
 ```js
 import { html, render } from 'lit-html';
 
-let name = '', currency = 'USD', bonds = 0, savings = 0;
+let userName = '', currency = 'USD', bonds = 0, savings = 0;
 
 function setMoney(b, s) {
   bonds = b;
@@ -202,7 +202,7 @@ function onSavings(e) {
 }
 
 const template = () => html`
-  <p><label>Your name: <input @input=${e => { name = e.target.value; draw(); }}></label></p>
+  <p><label>Your name: <input @input=${e => { userName = e.target.value; draw(); }}></label></p>
   <p><label>Currency:
     <select @change=${e => { currency = e.target.value; draw(); }}>
       <option>USD</option>
@@ -214,7 +214,7 @@ const template = () => html`
   <p><button @click=${() => setMoney(98, 765)}>rich</button>
     <button @click=${() => setMoney(0, 123)}>poor</button></p>
   <p><label>Savings: <input type="number" .value=${savings} @input=${onSavings}></label></p>
-  <p>Total: <output>${name} has a total of ${currency} ${bonds * 1000 + savings}</output></p>`;
+  <p>Total: <output>${userName} has a total of ${currency} ${bonds * 1000 + savings}</output></p>`;
 
 const draw = () => render(template(), document.querySelector('#app'));
 
@@ -254,7 +254,7 @@ What changed from Build 0:
 import { signal, effect } from '@preact/signals-core';
 import { html, render } from 'lit-html';
 
-const name = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
+const userName = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
 
 function setMoney(b, s) {
   bonds.value = b;
@@ -268,7 +268,7 @@ function onSavings(e) {
 }
 
 const template = () => html`
-  <p><label>Your name: <input @input=${e => name.value = e.target.value}></label></p>
+  <p><label>Your name: <input @input=${e => userName.value = e.target.value}></label></p>
   <p><label>Currency:
     <select @change=${e => currency.value = e.target.value}>
       <option>USD</option>
@@ -280,7 +280,7 @@ const template = () => html`
   <p><button @click=${() => setMoney(98, 765)}>rich</button>
     <button @click=${() => setMoney(0, 123)}>poor</button></p>
   <p><label>Savings: <input type="number" .value=${savings.value} @input=${onSavings}></label></p>
-  <p>Total: <output>${name.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}</output></p>`;
+  <p>Total: <output>${userName.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}</output></p>`;
 
 effect(() => {
   console.log('render');
@@ -292,7 +292,7 @@ effect(() => {
 
 - `signal('')` makes a box holding one value, and `.value` reads or writes it. The four state values are now signals. They are `const` because each name always refers to the same box; only what is inside changes.
 - `effect(fn)` runs `fn` once, now, and again each time a signal that `fn` read on its last run changes. The template reads all four signals, so a change to any of them redraws the page. `console.log('render')` prints a line in the console on each run.
-- The handlers now only write signals: there is no `draw()` anywhere. `e => name.value = e.target.value` is an arrow function whose body is one expression, the assignment. Its result is returned, and lit-html ignores it.
+- The handlers now only write signals: there is no `draw()` anywhere. `e => userName.value = e.target.value` is an arrow function whose body is one expression, the assignment. Its result is returned, and lit-html ignores it.
 - The redraw happens inside the write: `bonds.value = 98` returns only after the effect has run and the page is updated. The README says so: "Changing a signal's value synchronously updates every computed and effect that depends on that signal".
 - After a rejected key, `onSavings` writes no signal, so no effect runs and nothing redraws. Putting the number back is still its own job.
 
@@ -323,13 +323,13 @@ What changed from Build 1:
 import { signal, computed, effect } from '@preact/signals-core';
 import { html, render } from 'lit-html';
 
-const name = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
+const userName = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
 
 const bondsText = computed(() => {
   console.log('bondsText');
   return `we have ${bonds.value} thousand${bonds.value === 1 ? '' : 's'} in bonds`;
 });
-const totalText = computed(() => `${name.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}`);
+const totalText = computed(() => `${userName.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}`);
 
 function setMoney(b, s) {
   bonds.value = b;
@@ -343,7 +343,7 @@ function onSavings(e) {
 }
 
 const template = () => html`
-  <p><label>Your name: <input @input=${e => name.value = e.target.value}></label></p>
+  <p><label>Your name: <input @input=${e => userName.value = e.target.value}></label></p>
   <p><label>Currency:
     <select @change=${e => currency.value = e.target.value}>
       <option>USD</option>
@@ -395,13 +395,13 @@ What changed from Build 2:
 import { signal, computed, effect, batch } from '@preact/signals-core';
 import { html, render } from 'lit-html';
 
-const name = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
+const userName = signal(''), currency = signal('USD'), bonds = signal(0), savings = signal(0);
 
 const bondsText = computed(() => {
   console.log('bondsText');
   return `we have ${bonds.value} thousand${bonds.value === 1 ? '' : 's'} in bonds`;
 });
-const totalText = computed(() => `${name.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}`);
+const totalText = computed(() => `${userName.value} has a total of ${currency.value} ${bonds.value * 1000 + savings.value}`);
 
 function setMoney(b, s) {
   batch(() => {
@@ -417,7 +417,7 @@ function onSavings(e) {
 }
 
 const template = () => html`
-  <p><label>Your name: <input @input=${e => name.value = e.target.value}></label></p>
+  <p><label>Your name: <input @input=${e => userName.value = e.target.value}></label></p>
   <p><label>Currency:
     <select @change=${e => currency.value = e.target.value}>
       <option>USD</option>
