@@ -1102,6 +1102,6 @@ docker buildx create --name multiarch --driver docker-container --bootstrap --us
 
 On Apple Silicon with OrbStack, emulation is built in, so only the second line is needed.
 
-**Not used.** `node`/`npm` (Python's `http.server` serves the page; see [Run](README.md#run)) and the .NET SDK.
+**Not used.** `node`/`npm` (`serve.py`, built on Python's `http.server`, serves the page; see [Run](README.md#run)) and the .NET SDK.
 
 </details>

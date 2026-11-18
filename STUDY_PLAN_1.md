@@ -38,10 +38,10 @@ mkdir -p .temp/money-app && cp -r vendor .temp/money-app/
 `.temp/` is scratch space inside the repo: git ignores everything in it except its `.placeholder` file, and the boundary check skips it, so your builds are neither committed nor checked. Every build loads the Eruda console from that copy of `vendor/`; Build 0 uses no other library, and the later builds load Preact Signals and lit-html from it too. To run any build, from the repo root:
 
 ```bash
-cd .temp/money-app && uv run --no-project python -m http.server 8001
+uv run --no-project python serve.py 8001 .temp/money-app
 ```
 
-Then open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo. After you replace a file, reload the page; if a change doesn't show, hard-reload with Ctrl+Shift+R (Mac: Cmd+Shift+R). What `console.log` prints shows in the Eruda panel at the bottom of the page (see Build 0), and in the browser's own console under F12 → Console. The browser's console may also show one `404` error for `favicon.ico`: browsers ask every site for a tab icon, and this one has none. It is harmless.
+Then open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo. After you replace a file, reload the page: `serve.py` tells the browser to keep no copies ([README → Run](README.md#run)), so a reload always gets the new files. What `console.log` prints shows in the Eruda panel at the bottom of the page (see Build 0), and in the browser's own console under F12 → Console. The browser's console may also show one `404` error for `favicon.ico`: browsers ask every site for a tab icon, and this one has none. It is harmless.
 
 ## Build 0: plain DOM
 

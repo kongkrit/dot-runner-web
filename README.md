@@ -7,19 +7,20 @@ A small project for learning [Preact Signals](https://github.com/preactjs/signal
 ## Run
 
 ```bash
-uv run --no-project python -m http.server 8000
+uv run --no-project python serve.py
 ```
 
 Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. The panel at the bottom is [Eruda](https://github.com/liriliri/eruda), an in-page console that shows `console.log` output and errors; its floating button hides it. Ctrl+C stops the server.
 
 - **Why a server:** Chrome refuses to load ES modules (`<script type="module">`) from a `file://` page, so opening `index.html` directly shows the headings but no grids.
-- **Why `--no-project`:** uv skips looking for a `pyproject.toml` and creates no venv. It just runs Python's built-in file server.
-- **Network exposure:** `http.server` listens on every network interface, so other machines on your network can browse this folder, `.git/` included. Add `--bind 127.0.0.1` to keep it to this machine.
+- **Why `--no-project`:** uv skips looking for a `pyproject.toml` and creates no venv. It just runs `serve.py`, which needs nothing installed.
+- **Why `serve.py`:** it is Python's built-in file server, `http.server`, plus one header on every reply, `Cache-Control: no-store`, which tells the browser to keep no copy. With the plain server, a browser may reuse a copy of a file it fetched earlier, so an edit doesn't show even after a reload, and a phone has no easy way to clear its cache. It takes a port and a folder, as in `serve.py 8001 .temp/name-list`; the study plans use that.
+- **Network exposure:** `serve.py` listens on every network interface, so a phone on your Wi-Fi can open the page, and so can any other machine on your network, which can browse the folder it serves, `.git/` included. To keep it to this machine, run `uv run --no-project python -m http.server 8000 --bind 127.0.0.1` instead, which leaves caching on.
 
 ## Documents
 
 - [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) — how the app works, every source file explained part by part, the three patterns compared, and the Claude Code and Debian setup.
 - [STUDY_PLAN_1.md](STUDY_PLAN_1.md) — start here: one small form app, from plain DOM code to Preact Signals (`signal`, `effect`, `computed`, `batch`), then one section per component, then lit-html.
-- [STUDY_PLAN_2.md](STUDY_PLAN_2.md) — a name list (append, delete, up and down, edit, no duplicates, edit in a dialog, animated rows, swipe to delete, hold to reorder), where lit-html draws rows that appear, disappear and move.
+- [STUDY_PLAN_2.md](STUDY_PLAN_2.md) — a name list (append, delete, up and down, edit, no duplicates, edit in a dialog, animated rows, fit a phone's screen, swipe to delete or make VIP, hold to reorder), where lit-html draws rows that appear, disappear and move.
 - [STUDY_PLAN_3.md](STUDY_PLAN_3.md) — a read-then-build path: a hello world, a step counter in each version, then an app of your own.
 - [TEMPLATE_PROPOSAL.md](TEMPLATE_PROPOSAL.md) — a proposal (not started) to turn this setup into a reusable MVC template repo.

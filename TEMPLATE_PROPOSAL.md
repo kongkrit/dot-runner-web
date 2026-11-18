@@ -28,6 +28,7 @@ A red dot moves on a 16×8 grid in the last arrow-key direction pressed (Space s
 
 ```
 index.html     import map, CSS, #app-singleton / #app-factory / #app-class containers, one module script each
+serve.py       dev server: Python's http.server plus Cache-Control: no-store
 singleton/     each part exists once; state in file-level variables; parts are ready-made objects
   model-controller-common.js   Cmd only: the controller→model message (like the C `command` enum)
   model.js        exports `model` (signals at file level, read-only computeds, update(cmd))
@@ -51,7 +52,7 @@ vendor/        lit-html 3.3.3 (lit-html.js), @preact/signals-core 1.14.5 (signal
 C/             the original C program
 ```
 
-- **Run it:** `uv run --no-project python -m http.server 8000`, then open <http://localhost:8000>.
+- **Run it:** `uv run --no-project python serve.py`, then open <http://localhost:8000>. `serve.py` is Python's `http.server` plus `Cache-Control: no-store`, so browsers never reuse a stale copy.
 - **Build:** there is no npm and no build step. The browser loads the vendored libraries as ES modules, through the import map in `index.html`.
 - **README.md** is a short front page: what the app is, how to run it, links to the other docs. **HOW_AND_WALKTHROUGH.md** explains everything for the learner. It has a "Code walkthrough" that copies each file in full, folded per folder, and a "Singleton vs factory vs class" section that compares all three: a three-column table of the obvious differences, subtle differences, pros and cons for each, a "Factory vs class" table and "Which to use". Read it to see how explanations are pitched.
 - **History worth knowing:**
