@@ -59,7 +59,7 @@ Each build has three steps: **read** the listed sections, in order; then copy th
 - **Name List:** a table with the columns **No.** (1, 2, 3, …) and **Name**. When it is empty, it says "No names yet".
 - Each row ends in buttons, one kind more per build: **delete** (Build 2); **up** and **down**, which swap the row with its neighbor (Build 3); and **edit**, placed first, which turns the name into a text box, where leaving the box or pressing Enter saves the new name and Escape puts the old one back (Build 4). Build 7's edit opens a pop-up dialog instead, with **Ok**, which saves; **Revert**, which puts the old name back in the box; and **Cancel**, which closes the dialog without saving.
 - From Build 8 on, a new row fades in, a deleted one fades out, and a moved one slides to its new place.
-- From Build 9 on, a long name wraps onto more lines, so the buttons stay on the screen.
+- From Build 9 on, the buttons show icons, a long name wraps onto more lines, so the buttons stay on the screen, and the page doesn't zoom.
 - From Build 10 on, a finger can do the same without the buttons. Swipe a name left to delete its row, and, from Build 11, right to add " VIP" to the end of the name, or take it off. From Builds 12 and 13, each swipe shows a button to tap instead: Delete on the right, VIP on the left, and a swipe the other way puts it away. From Build 14, hold a name still for half a second, then drag its row up or down. A mouse still uses the buttons.
 
 The app's state is one value, `names`, an array of strings held in a signal. Build 4 adds a second signal, which belongs to the view, not the model: which row is being edited. Build 7 keeps that in a plain variable instead, since nothing on the screen is drawn from it. Builds 10, 12 and 14 add three more signals of the view's own: the row being swiped, the row whose button is out, and the row being dragged.
@@ -1127,13 +1127,14 @@ What changed from Build 7:
 <summary>Read, code, notes, try it</summary>
 <br>
 
-On a phone, a long name pushes the buttons off the screen. Two CSS rules let the name wrap onto more lines instead, so the buttons always stay in view, on one line; `main.js` doesn't change. This is also the first build for a phone: it adds the viewport line, and shows how to open the page on one.
+On a phone, a long name pushes the buttons off the screen, and the page zooms when you don't want it to. This build fits the page to the phone. The buttons show icons instead of words, so they take less width. CSS lets the name wrap onto more lines while the buttons stay in view, on one line, and makes the table as wide as the screen. And the page no longer zooms. This is also the first build for a phone: it adds the viewport line, and shows how to open the page on one.
 
 **Read:**
 
 1. MDN [`<meta name="viewport">`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/viewport): the introduction.
 2. MDN CSS [`overflow-wrap`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/overflow-wrap) and [`white-space`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/white-space): the introductions.
 3. MDN [`:nth-child()`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:nth-child) and [`:last-child`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:last-child): the introductions.
+4. MDN SVG [`<path>`](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/path): the introduction; lit.dev [`svg`](https://lit.dev/docs/api/templates/#svg); and MDN's [`title` attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/title).
 
 **Code:** in `.temp/name-list/index.html`, add this line under `<meta charset="utf-8">`:
 
@@ -1145,11 +1146,21 @@ and replace the `<style>` line with:
 
 ```html
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows td:nth-child(2) { overflow-wrap: anywhere; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows td:nth-child(2) { width: 100%; overflow-wrap: anywhere; }
     #name-rows td:last-child { white-space: nowrap; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
   </style>
+```
+
+and the `<form id="name-form" …>` line, whose append button gets an icon too, with:
+
+```html
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button title="append"><svg width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></form>
 ```
 
 <details>
@@ -1163,10 +1174,13 @@ and replace the `<style>` line with:
   <meta name="viewport" content="width=device-width">
   <title>Names</title>
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows td:nth-child(2) { overflow-wrap: anywhere; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows td:nth-child(2) { width: 100%; overflow-wrap: anywhere; }
     #name-rows td:last-child { white-space: nowrap; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
   </style>
   <script type="importmap">
   { "imports": {
@@ -1177,7 +1191,8 @@ and replace the `<style>` line with:
   <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 </head>
 <body>
-  <form id="name-form"><label>Name: <input id="name-box"></label> <button>append</button></form>
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button title="append"><svg width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></form>
   <dialog id="edit-dialog">
     <form id="edit-form" method="dialog">
       <p id="edit-title"></p>
@@ -1197,27 +1212,140 @@ and replace the `<style>` line with:
 
 </details>
 
-`.temp/name-list/main.js` stays as it is.
+Then replace `.temp/name-list/main.js` with:
+
+```js
+import { signal, computed, effect } from '@preact/signals-core';
+import { html, svg, render } from 'lit-html';
+
+// Model state: the names, in order
+const model = { names: signal([]) };
+
+// Derived value: the names as a Set, which finds a name without searching
+const taken = computed(() => {
+  console.log('taken');
+  return new Set(model.names.value);
+});
+
+// Update model: the only code that writes model.names; cmd says what to do
+function updateModel(cmd) {
+  const names = model.names.value;
+  const name = cmd.name?.trim();   // append and rename carry a name; for delete and move, ?. gives undefined
+  if (name === '') return;                                   // a blank name changes nothing,
+  if (name !== undefined && taken.value.has(name)) return;   // nor does one already in the list
+  switch (cmd.type) {
+    case 'append':
+      model.names.value = [...names, name];   // a new array, not push: see Build 1's notes
+      break;
+    case 'delete':
+      model.names.value = names.filter((_, i) => i !== cmd.index);   // keep every name but the one at cmd.index
+      break;
+    case 'move': {
+      const i = cmd.index, j = cmd.index + cmd.by;   // by is -1 (up) or +1 (down)
+      if (j < 0 || j >= names.length) break;          // the first name can't go up, nor the last down
+      model.names.value = names.with(i, names[j]).with(j, names[i]);   // swap the two
+      break;
+    }
+    case 'rename':
+      model.names.value = names.with(cmd.index, name);
+      break;
+  }
+}
+
+// --------------- view transitions
+// Update the model, and let the browser animate the page from its old look to its new one
+function updateAnimated(cmd) {
+  document.startViewTransition(() => updateModel(cmd));
+}
+
+// --------------- name form
+const nameForm = document.querySelector('#name-form');
+const nameBox = document.querySelector('#name-box');
+nameForm.addEventListener('submit', e => {
+  e.preventDefault();   // a form's default is to send itself to the server, which reloads the page
+  updateAnimated({ type: 'append', name: nameBox.value });
+  nameBox.value = '';
+});
+
+// --------------- edit dialog
+const editDialog = document.querySelector('#edit-dialog');
+const editForm = document.querySelector('#edit-form');
+const editTitle = document.querySelector('#edit-title');
+const editBox = document.querySelector('#edit-box');
+const editCancel = document.querySelector('#edit-cancel');
+let editIndex;   // the row the dialog edits: a plain variable, since nothing is drawn from it
+
+function onEdit(i, name) {
+  editIndex = i;
+  editTitle.textContent = `Editing No. ${i + 1} Name: ${name}`;
+  editBox.value = name;
+  editBox.defaultValue = name;   // what Revert, a reset button, puts back
+  editDialog.showModal();   // until the dialog closes, the rest of the page ignores the mouse and keyboard
+}
+
+editForm.addEventListener('submit', () => {   // Ok, or Enter in the box; method="dialog" then closes the dialog
+  updateModel({ type: 'rename', index: editIndex, name: editBox.value });
+});
+editCancel.addEventListener('click', () => editDialog.close());   // Escape closes it too, with no code of ours
+
+// --------------- name list
+const nameRows = document.querySelector('#name-rows');
+
+// The buttons' icons: line drawings on a 24 × 24 grid, stroked in the button's text color (currentColor), so a
+// disabled button's icon grays out with its text would. svg`…` makes SVG pieces, as html`…` makes HTML ones.
+const icon = paths => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const icons = {
+  edit: icon(svg`<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>`),
+  up: icon(svg`<path d="m18 15-6-6-6 6"/>`),
+  down: icon(svg`<path d="m6 9 6 6 6-6"/>`),
+  delete: icon(svg`<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`),
+};
+
+function row(name, i, names) {
+  return html`<tr style="view-transition-name: row-${CSS.escape(name)}">
+    <td>${i + 1}</td>
+    <td>${name}</td>
+    <td>
+      <button title="edit" @click=${() => onEdit(i, name)}>${icons.edit}</button>
+      <button title="up" ?disabled=${i === 0} @click=${() => updateAnimated({ type: 'move', index: i, by: -1 })}>${icons.up}</button>
+      <button title="down" ?disabled=${i === names.length - 1} @click=${() => updateAnimated({ type: 'move', index: i, by: 1 })}>${icons.down}</button>
+      <button title="delete" @click=${() => updateAnimated({ type: 'delete', index: i })}>${icons.delete}</button>
+    </td>
+  </tr>`;
+}
+
+effect(() => {
+  const names = model.names.value;
+  console.log('render');
+  render(names.length === 0 ? html`<tr><td colspan="2">No names yet</td></tr>` : names.map(row), nameRows);
+});
+```
 
 - **The problem, measured.** In Chrome on a phone screen 390 px wide, a one-word name of 20 to 35 letters pushed the buttons onto 2 or 3 lines. One of 50 or 60 letters made the table 578 to 738 px wide, with its last buttons off the screen, so the page grew, and the phone zoomed out to show it all, to 0.67 and 0.53 of its size.
 - **Why the table grows.** A table column is never narrower than the longest piece of its content that can't be broken, its *min-content* width: for the names, the longest word; for the buttons, the widest button, since the browser may wrap between buttons. While those minimums fit the screen, the browser narrows the columns it can, here by wrapping the buttons. Once they add up to more than the screen, the table is wider than the screen.
-- **The two rules turn both minimums around.** `overflow-wrap: anywhere` lets the browser break a name between any two letters when a line is full, so the name column's min-content is one letter. `white-space: nowrap` forbids line breaks between the buttons, so their cell's min-content is the whole row of buttons. The table then fits the screen: the buttons keep one line, and the name gets the width that is left, wrapping onto as many lines as it needs. With the same names, measured: the table ended at 382 px and the last button at 379 px, the page stayed 390 px wide at full size, and a 60-letter name took 5 lines.
+- **Two of the rules turn both minimums around.** `overflow-wrap: anywhere` lets the browser break a name between any two letters when a line is full, so the name column's min-content is one letter. `white-space: nowrap` forbids line breaks between the buttons, so their cell's min-content is the whole row of buttons. The table then fits the screen: the buttons keep one line, and the name gets the width that is left, wrapping onto as many lines as it needs. With the same names, measured: the table ended at 382 px and the last button at 379 px, the page stayed 390 px wide at full size, and a 60-letter name took 5 lines.
+- **Icons instead of words.** `icon(paths)` wraps an icon's lines in an `<svg>` 20 px square, drawn on a 24 × 24 grid (`viewBox`), and `icons` holds one per button. `stroke="currentColor"` draws the lines in the button's text color, so a disabled button's icon grays out as its word did. The `<svg>` element sits in an `` html`…` `` template, but the `<path>`s inside it must be SVG elements, not HTML ones, and `` svg`…` `` is the template tag that makes them so; an HTML element named `path` would draw nothing. The `title` gives each icon-only button a name: a tooltip under the mouse, and what a screen reader says. Measured: the four buttons now take 156 px, where the words took about 240. The append button lives in `index.html`, which lit-html doesn't draw, so its plus icon is written there directly, as an `<svg>` in the HTML. `vertical-align: middle` lines each icon button up with what is beside it: a button with no text has no baseline of its own, so by default its bottom edge sits on the text's baseline, too high.
+- **The table fills the screen.** `width: 100%` makes the table as wide as the page, and `max-width: 480px` on `body` keeps the page a phone-sized column, so on a computer it doesn't stretch across the window. `width: 100%` on the name cell then gives it all the width the other columns don't need. On a phone screen 390 px wide, measured: the name cell runs from 38 to 220 px, and the buttons sit at the right. Build 12 needs that room, so that a row moved 80 px left still shows most of its name cell.
+- **No zoom.** iPhone Safari zooms in when a text box whose font is under 16 px gets the focus, to make the text readable, and the page stays zoomed in. A browser's default for text boxes is about 13 px, so `input { font-size: 16px; }` stops that. Pinching and double-tapping zoom too. `touch-action: pan-x pan-y` on the whole page (`:root`, the `<html>` element) allows only panning, so neither zooms; Safari has ignored `user-scalable=no` in the viewport line since iOS 10, which leaves this. What's lost: people who zoom to read can't. That suits an app laid out for the screen, but not a page of text.
 - **No measuring.** The browser lays the table out again whenever the screen's width changes, such as when the phone turns, so the code never needs the screen's size.
 - `td:nth-child(2)` picks each row's second cell, the name, and `td:last-child` its last, the buttons. Build 10 gives the name cell a class of its own.
-- **Support:** `overflow-wrap: anywhere` works in Chrome 80+, Safari on iPhone 15.4+ and Firefox 65+.
-- **The viewport line.** Without it, a phone lays the page out 980 px wide, like a desktop screen, and shrinks it to fit. On an iPhone 390 points wide, everything is drawn at 390 / 980 ≈ 0.4 times its size, too small to touch, and the two rules above would have 980 px to work with. `width=device-width` makes one CSS pixel one *point*, Apple's unit for sizes on screen.
+- **Support:** `overflow-wrap: anywhere` works in Chrome 80+, Safari on iPhone 15.4+ and Firefox 65+, and `touch-action: pan-x pan-y` in Chrome 36+ and Safari on iPhone 13+. The zoom rules weren't tested on a real iPhone.
+- **The viewport line.** Without it, a phone lays the page out 980 px wide, like a desktop screen, and shrinks it to fit. On an iPhone 390 points wide, everything is drawn at 390 / 980 ≈ 0.4 times its size, too small to touch, and the rules above would have 980 px to work with. `width=device-width` makes one CSS pixel one *point*, Apple's unit for sizes on screen.
 - **To try it on a phone,** run the server as usual, find the computer's address with `hostname -I`, and open `http://<that address>:8001` on a phone on the same Wi-Fi. `serve.py` listens on all of the computer's addresses, not only `localhost`, and tells the phone to keep no copies, so a reload there shows your latest change; if the phone can't connect, a firewall may be blocking port 8001. **On the computer,** open Chrome's DevTools (F12) and click the device toolbar button (Ctrl+Shift+M): the page then gets a phone's screen, and the mouse acts as a finger.
 
 What changed from Build 8:
 
-1. `index.html` has a viewport line, and its `<style>` became a block with two more rules.
-2. `main.js` is Build 8's.
+1. `index.html` has a viewport line and an icon on its append button, and its `<style>` became a block with rules for zoom, the page's and the table's width, the name and button cells, and the icons.
+2. `svg` joined the lit-html import, the list section has `icon` and `icons`, and each row button shows an icon and has a `title`.
 
 **Try it,** on a phone or with the device toolbar:
 
 - Append `Ann`, then the one-word name `Wolfeschlegelsteinhausenbergerdorffvoralternwaren`: it wraps, and its buttons stay on one line at the right.
-- With the device toolbar, turn the screen with its rotate button: the long name gets the extra width and takes fewer lines.
-- Delete the two new rules and reload: the long name pushes its buttons off the screen, and the page zooms out. Put them back.
+- With the device toolbar, turn the screen with its rotate button: the table widens, but only to 480 px, the page's `max-width`, with the buttons still at its right end.
+- On a phone, tap the name box: the page stays as it is. Pinch or double-tap: nothing zooms.
+- On the computer, with the device toolbar off, hold the mouse over a button: its `title` shows.
+- Delete `overflow-wrap: anywhere;` and the `white-space: nowrap;` rule and reload: the long name pushes its buttons off the screen, and the page zooms out. Put them back.
 
 </details>
 
@@ -1233,15 +1361,20 @@ On a phone, swipe a name to the left: its row follows the finger and turns red p
 
 1. MDN [Pointer events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events): the introduction, then [Pointer capture](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events#pointer_capture) and [touch-action CSS property](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events#touch-action_css_property).
 2. MDN: the [`pointercancel` event](https://developer.mozilla.org/en-US/docs/Web/API/Element/pointercancel_event), the [`touchend` event](https://developer.mozilla.org/en-US/docs/Web/API/Element/touchend_event), and CSS [`touch-action`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/touch-action) and [`translate`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/translate).
+3. MDN [`:active-view-transition-type()`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:active-view-transition-type): the introduction.
 
 **Code:** in `.temp/name-list/index.html`, replace the `<style>` block with:
 
 ```html
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; }
     #name-rows td:last-child { white-space: nowrap; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
     #name-rows tr.deleting { background: #a33; }
   </style>
 ```
@@ -1257,10 +1390,14 @@ On a phone, swipe a name to the left: its row follows the finger and turns red p
   <meta name="viewport" content="width=device-width">
   <title>Names</title>
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; }
     #name-rows td:last-child { white-space: nowrap; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
     #name-rows tr.deleting { background: #a33; }
   </style>
   <script type="importmap">
@@ -1272,7 +1409,8 @@ On a phone, swipe a name to the left: its row follows the finger and turns red p
   <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 </head>
 <body>
-  <form id="name-form"><label>Name: <input id="name-box"></label> <button>append</button></form>
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button title="append"><svg width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></form>
   <dialog id="edit-dialog">
     <form id="edit-form" method="dialog">
       <p id="edit-title"></p>
@@ -1296,7 +1434,7 @@ Then replace `.temp/name-list/main.js` with:
 
 ```js
 import { signal, computed, effect, batch } from '@preact/signals-core';
-import { html, render } from 'lit-html';
+import { html, svg, render } from 'lit-html';
 
 // Model state: the names, in order
 const model = { names: signal([]) };
@@ -1365,6 +1503,17 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 // --------------- name list
 const nameRows = document.querySelector('#name-rows');
 
+// The buttons' icons: line drawings on a 24 × 24 grid, stroked in the button's text color (currentColor), so a
+// disabled button's icon grays out with its text would. svg`…` makes SVG pieces, as html`…` makes HTML ones.
+const icon = paths => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const icons = {
+  edit: icon(svg`<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>`),
+  up: icon(svg`<path d="m18 15-6-6-6 6"/>`),
+  down: icon(svg`<path d="m6 9 6 6 6-6"/>`),
+  delete: icon(svg`<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`),
+};
+
 // Gesture settings: change these until a swipe feels right
 const MOVE_PX = 10;      // a finger must move this far left before the row follows it, so a tap stays a tap
 const DELETE_PX = 100;   // a row swiped at least this far left is deleted when the finger lifts
@@ -1375,10 +1524,13 @@ let press = null;             // the finger on a name: { pointerId, index, x }; 
 // Build 8's updateAnimated, plus letting go of a swiped row: in one view transition, apply cmd, if any,
 // and clear swipe, so every row slides to its new place
 function settle(cmd) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    swipe.value = null;
-  }));
+  document.startViewTransition({
+    update: () => batch(() => {
+      if (cmd) updateModel(cmd);
+      swipe.value = null;
+    }),
+    types: swipe.value ? ['swipe'] : [],   // the end of a swipe gets index.html's quicker animation
+  });
 }
 
 function onPointerDown(e, i) {
@@ -1411,10 +1563,10 @@ function row(name, i, names) {
     <td>${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
-      <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
+      <button title="edit" @click=${() => onEdit(i, name)}>${icons.edit}</button>
+      <button title="up" ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>${icons.up}</button>
+      <button title="down" ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>${icons.down}</button>
+      <button title="delete" @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>
     </td>
   </tr>`;
 }
@@ -1430,7 +1582,7 @@ effect(() => {
 - **Only the name takes gestures.** Its cell has the class `name` and the `@pointerdown`. A gesture that started on a button could end in a click on it: in Chrome, a touch that moves 15 px still counts as a tap. The name cell has no click to set off.
 - **A touch on a name never becomes a click.** Chrome also moves a tap that lands near a button onto the button: in a test, a finger that slid 15 px right from `Ann` and lifted clicked the edit button beside her, and the edit dialog opened. The `touchend` listener stops that. `touchend` is the older *touch event* for a lifting finger, sent after `pointerup`, and cancelling it with `preventDefault()` tells the browser not to turn the touch into a click.
 - **Where the listeners go.** `pointerdown` belongs to one name, so it sits in the template with its `i`, like the buttons' `@click`. Moving and lifting belong to whichever press is under way, so each has one listener on `nameRows`, added once. The browser *captures* a finger's pointer: its events keep going to the element it first touched, even after it slides off. They bubble up to `<tbody>`, so `nameRows` hears them.
-- **`touch-action: pan-y`** tells the browser which finger moves it keeps for itself: `pan-y` is a vertical pan, so a vertical swipe on a name still scrolls the page, and a sideways one is left to the code. Without it, the browser claims the sideways move too and sends `pointercancel` before the row has moved; the last **Try it** shows this. The rule is on the cell, because `touch-action` doesn't apply to table rows ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/touch-action)). It shares the `.name` rule with Build 9's `overflow-wrap`, which now finds the name cell by its class.
+- **`touch-action: pan-y`** tells the browser which finger moves it keeps for itself: `pan-y` is a vertical pan, so a vertical swipe on a name still scrolls the page, and a sideways one is left to the code. Without it, the browser claims the sideways move too and sends `pointercancel` before the row has moved; the last **Try it** shows this. The rule is on the cell, because `touch-action` doesn't apply to table rows ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/touch-action)). It shares the `.name` rule with Build 9's `width` and `overflow-wrap`, which now find the name cell by its class.
 - **`pointercancel`** is the browser saying "this finger is mine now", for example when it starts to scroll. `onPointerEnd` handles it like a lift, but never deletes on it.
 - **`swipe` is a signal, `press` a plain variable:** Build 7's rule again. The screen is drawn from how far the row is swiped, but nothing is drawn from where the finger landed. Every finger move writes `swipe`, so the effect redraws and logs `render`, about once per screen frame. lit-html compares the slots and rewrites one: the swiped row's `style`.
 - **The row follows the finger with `translate`:** `translate: -40px 0` draws the row 40 px to the left without moving anything else; the table's layout stays as it was. `dx` is negative to the left, and `Math.min(0, dx)` keeps it from going right. The swipe waits for `MOVE_PX`, 10 px, so a tap that wobbles a little isn't a swipe.
@@ -1486,19 +1638,20 @@ Neither fix was tested on a real iPhone, where Safari's zoom handling may differ
 </details>
 
 - **`settle` replaces Build 8's `updateAnimated`.** It does the same, and also clears `swipe`, so one function serves the buttons, the form and the end of a swipe. At the end of a swipe, the browser captures the row where the finger left it; then the callback deletes the name, if the row is past the line, and clears `swipe`, both in one `batch`, so the effect draws once. A deleted row's name is gone afterward, so it fades out where it was and the rows below slide up; a kept one slides home. The form calls `settle`, which is written further down; that works, because the call happens only when the form is submitted, after the whole file has run.
+- **A swipe snaps in 0.25 s; a tap animates in 0.5 s.** `settle` hands the view transition a list of *types*, labels that CSS can test for: `['swipe']` while a swipe is under way, which is only when the call comes from the end of one, and none otherwise. In `index.html`, `:root:active-view-transition-type(swipe)` matches the page while a transition of that type runs, so its rule gives the end of a swipe, a slide back or a deleted row's fade, 0.25 s, over Build 8's 0.5 s for everything else. 0.25 s is also the browser's own default; it is written out so the rule says what it does. Types work in Chrome 125+, Safari on iPhone 18.2+ and Firefox 147+. A browser with view transitions but no types, such as Safari 18.0 and 18.1, takes only a function, so by the standard the `{ update, types }` object makes `startViewTransition` throw a `TypeError`, and the swipe never settles; that wasn't tested.
 - **The `deleting` class** turns the row red from `DELETE_PX` on, so you see before you let go that it will be deleted.
 
 What changed from Build 9:
 
-1. `index.html`'s `<style>` finds the name cell by its class, `name`, which also gets `touch-action`, and has a `deleting` rule.
+1. `index.html`'s `<style>` finds the name cell by its class, `name`, which also gets `touch-action`, and has a `deleting` rule and a 0.25 s rule for the end of a swipe.
 2. `batch` is back in the import.
-3. `updateAnimated` became `settle`, in the list section, which also lets go of a swiped row; the form and the buttons call it.
+3. `updateAnimated` became `settle`, in the list section, which also lets go of a swiped row and labels the end of a swipe `swipe`; the form and the buttons call it.
 4. The list section has the gesture settings, the `swipe` signal, the `press` variable, three pointer handlers and four listeners.
 5. `row` draws the swiped row with its `translate` and the `deleting` class, and the name cell, now class `name`, takes `pointerdown`.
 
 **Try it,** on a phone or with the device toolbar:
 
-- Append `Ann`, `Bob` and `Cy`. Swipe `Bob` left by about half a name's width and let go: the row slides back.
+- Append `Ann`, `Bob` and `Cy`. Swipe `Bob` left by about half a name's width and let go: the row slides back, in 0.25 s. Tap a down button: the rows swap in 0.5 s.
 - Swipe further: the row turns red. Let go: it fades out, and `Cy` slides up.
 - Swipe a name right: nothing moves.
 - Tap the buttons: they still work. Turn the device toolbar off and drag a name with the mouse: nothing moves.
@@ -1515,16 +1668,20 @@ What changed from Build 9:
 
 Swipe a name right, past a line, and let go: " VIP" goes on the end of the name, or comes off if it was there. The row follows the finger and turns gold past the line. A swipe left still deletes. The model gets one new rule.
 
-**Read:** MDN [`String.prototype.endsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith) and [`String.prototype.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice).
+**Read:** MDN [`String.prototype.endsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith), [`String.prototype.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice), [`ViewTransition.finished`](https://developer.mozilla.org/en-US/docs/Web/API/ViewTransition/finished), and the introduction of [`Promise`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise).
 
 **Code:** in `.temp/name-list/index.html`, replace the `<style>` block with:
 
 ```html
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; }
     #name-rows td:last-child { white-space: nowrap; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
     #name-rows tr.deleting { background: #a33; }
     #name-rows tr.toggling { background: #a80; }
   </style>
@@ -1551,10 +1708,14 @@ and put the table inside a `<div>` that clips, Fix 2 from Build 10's fold:
   <meta name="viewport" content="width=device-width">
   <title>Names</title>
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; }
     #name-rows td:last-child { white-space: nowrap; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
     #name-rows tr.deleting { background: #a33; }
     #name-rows tr.toggling { background: #a80; }
   </style>
@@ -1567,7 +1728,8 @@ and put the table inside a `<div>` that clips, Fix 2 from Build 10's fold:
   <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 </head>
 <body>
-  <form id="name-form"><label>Name: <input id="name-box"></label> <button>append</button></form>
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button title="append"><svg width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></form>
   <dialog id="edit-dialog">
     <form id="edit-form" method="dialog">
       <p id="edit-title"></p>
@@ -1593,7 +1755,7 @@ Then replace `.temp/name-list/main.js` with:
 
 ```js
 import { signal, computed, effect, batch } from '@preact/signals-core';
-import { html, render } from 'lit-html';
+import { html, svg, render } from 'lit-html';
 
 // Model state: the names, in order
 const model = { names: signal([]) };
@@ -1667,6 +1829,17 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 // --------------- name list
 const nameRows = document.querySelector('#name-rows');
 
+// The buttons' icons: line drawings on a 24 × 24 grid, stroked in the button's text color (currentColor), so a
+// disabled button's icon grays out with its text would. svg`…` makes SVG pieces, as html`…` makes HTML ones.
+const icon = paths => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const icons = {
+  edit: icon(svg`<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>`),
+  up: icon(svg`<path d="m18 15-6-6-6 6"/>`),
+  down: icon(svg`<path d="m6 9 6 6 6-6"/>`),
+  delete: icon(svg`<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`),
+};
+
 // Gesture settings: change these until a swipe feels right
 const MOVE_PX = 10;      // a finger must move this far sideways before the row follows it, so a tap stays a tap
 const DELETE_PX = 100;   // a row swiped at least this far left is deleted when the finger lifts
@@ -1678,10 +1851,19 @@ let press = null;             // the finger on a name: { pointerId, index, x }; 
 // Build 8's updateAnimated, plus letting go of a swiped row: in one view transition, apply cmd, if any,
 // and clear swipe, so every row slides to its new place
 function settle(cmd) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    swipe.value = null;
-  }));
+  return document.startViewTransition({
+    update: () => batch(() => {
+      if (cmd) updateModel(cmd);
+      swipe.value = null;
+    }),
+    types: swipe.value ? ['swipe'] : [],   // the end of a swipe gets index.html's quicker animation
+  });
+}
+
+// A rename changes the row's view-transition-name, so in one transition the old row would fade out and the
+// renamed one fade in, without sliding: slide the row home first, and rename once that has finished
+function toggleVip(i) {
+  settle(null).finished.then(() => updateModel({ type: 'vip', index: i }));
 }
 
 function onPointerDown(e, i) {
@@ -1695,16 +1877,11 @@ function onPointerMove(e) {
   if (swipe.value || Math.abs(dx) >= MOVE_PX) swipe.value = { index: press.index, dx };   // left or right
 }
 
-// What a swipe let go at s.dx does: past the line on the left deletes, past the one on the right toggles VIP
-function swipeCmd(s) {
-  if (s.dx <= -DELETE_PX) return { type: 'delete', index: s.index };
-  if (s.dx >= VIP_PX) return { type: 'vip', index: s.index };
-  return null;
-}
-
 function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the browser took it over, to scroll
   if (e.pointerId !== press?.pointerId) return;
-  if (swipe.value) settle(e.type === 'pointerup' ? swipeCmd(swipe.value) : null);
+  const s = swipe.value, up = e.type === 'pointerup';
+  if (s && up && s.dx >= VIP_PX) toggleVip(s.index);                                          // right past the line: toggle VIP
+  else if (s) settle(up && s.dx <= -DELETE_PX ? { type: 'delete', index: s.index } : null);   // left past the line: delete
   press = null;
 }
 
@@ -1720,10 +1897,10 @@ function row(name, i, names) {
     <td>${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
-      <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
+      <button title="edit" @click=${() => onEdit(i, name)}>${icons.edit}</button>
+      <button title="up" ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>${icons.up}</button>
+      <button title="down" ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>${icons.down}</button>
+      <button title="delete" @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>
     </td>
   </tr>`;
 }
@@ -1736,7 +1913,8 @@ effect(() => {
 ```
 
 - **The rule lives in the model.** `{ type: 'vip', index }` is a new command. Whether a name ends in " VIP" is a fact about the data, so toggling it is a rule of the model, next to the others. The `vip` case works out the new name and hands it to `rename` by calling `updateModel` again, so a VIP name obeys the rename rules: not blank, not taken. Example: `Bob` becomes `Bob VIP`, and `Bob VIP` becomes `Bob`: `slice(0, -4)` drops the last 4 characters, " VIP". With `Ann VIP` already in the list, swiping `Ann` right changes nothing, just as renaming `Ann` to `Ann VIP` would.
-- **One swipe, two directions.** `onPointerMove` now keeps `dx` either way, once the finger has moved `MOVE_PX` either way. `swipeCmd` says what letting go does: past `DELETE_PX` to the left, delete; past `VIP_PX` to the right, toggle VIP; in between, nothing. The row turns red (`deleting`) or gold (`toggling`) as it passes either line.
+- **One swipe, two directions.** `onPointerMove` now keeps `dx` either way, once the finger has moved `MOVE_PX` either way. `onPointerEnd` says what letting go does: past `VIP_PX` to the right, toggle VIP; past `DELETE_PX` to the left, delete; in between, nothing. The row turns gold (`toggling`) or red (`deleting`) as it passes either line.
+- **The rename waits for the slide.** Renaming `Bob` changes his row's `view-transition-name` from `row-Bob` to `row-Bob\ VIP`, so in one view transition the browser would see one row leave and another arrive, and fade them instead of sliding the row home. `toggleVip` takes two steps. `settle(null)` slides the row home under its old name, and its view transition's `finished`, a *promise* (an object for a result that comes later, whose `.then(f)` runs `f` when it comes), runs the rename once the slide is over. For that, `settle` now returns the view transition. The rename itself isn't animated: the name just changes.
 - **The row moves right, so the table needs the clip.** A row drawn past the screen's right edge would widen the page (Build 10's "Why left"). The `<div>` around the table cuts it off 8 px from the edge. Measured: the page stayed 390 px wide at full size, both during a 150 px right swipe and during the animation after it.
 - **Start a right swipe on the name, not at the screen's very left edge:** there, a right swipe is Safari's "go back".
 
@@ -1744,12 +1922,12 @@ What changed from Build 10:
 
 1. `index.html` has a `toggling` rule, and the table sits in a clipping `<div>`.
 2. The model has a `vip` case.
-3. The gesture settings have `VIP_PX`, `onPointerMove` swipes both ways, and `swipeCmd` turns a swipe that was let go into a command.
+3. The gesture settings have `VIP_PX`, and `onPointerMove` swipes both ways. `onPointerEnd` turns a swipe that was let go into a delete or a VIP toggle. `settle` returns its view transition, which `toggleVip` waits for.
 4. `row` colors the row `toggling` past the right-hand line.
 
 **Try it,** on a phone or with the device toolbar:
 
-- Append `Ann`, `Bob` and `Cy`. Swipe `Bob` right past the line: the row turns gold. Let go: it reads `Bob VIP`. Swipe it again: `Bob`.
+- Append `Ann`, `Bob` and `Cy`. Swipe `Bob` right past the line: the row turns gold. Let go: it slides home, then reads `Bob VIP`. Swipe it again: `Bob`.
 - Swipe a name right a little and let go: the row slides back, unchanged.
 - Append `Ann VIP`, then swipe `Ann` right: nothing changes, since `Ann VIP` is taken.
 - Swipe `Cy` left: it is still deleted.
@@ -1763,7 +1941,7 @@ What changed from Build 10:
 <summary>Read, code, notes, try it</summary>
 <br>
 
-As on the iPhone, a left swipe no longer deletes by itself. Swipe a name left, and a red Delete button slides out from the row's right end; let go past halfway and it stays out. Tap it to delete the row, or swipe the name right to put it away. The right swipe still toggles VIP, as in Build 11, and the row's own delete button still works as before. The model is Build 11's.
+As on the iPhone, a left swipe no longer deletes by itself. Swipe a name left, and the row slides left, with a red Delete button, a trash icon, in the gap it leaves at the right; let go past halfway and it stays out. Tap it to delete the row, or swipe the row right to put it away. The right swipe still toggles VIP, as in Build 11, and the row's own delete button still works as before. The model is Build 11's.
 
 **Read:**
 
@@ -1774,11 +1952,15 @@ As on the iPhone, a left swipe no longer deletes by itself. Swipe a name left, a
 
 ```html
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; }
     #name-rows td:last-child { white-space: nowrap; position: relative; }
-    #name-rows .bin { position: absolute; right: 0; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
+    #name-rows .bin { position: absolute; left: 100%; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
     #name-rows tr.toggling { background: #a80; }
   </style>
 ```
@@ -1794,11 +1976,15 @@ As on the iPhone, a left swipe no longer deletes by itself. Swipe a name left, a
   <meta name="viewport" content="width=device-width">
   <title>Names</title>
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; }
     #name-rows td:last-child { white-space: nowrap; position: relative; }
-    #name-rows .bin { position: absolute; right: 0; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
+    #name-rows .bin { position: absolute; left: 100%; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
     #name-rows tr.toggling { background: #a80; }
   </style>
   <script type="importmap">
@@ -1810,7 +1996,8 @@ As on the iPhone, a left swipe no longer deletes by itself. Swipe a name left, a
   <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 </head>
 <body>
-  <form id="name-form"><label>Name: <input id="name-box"></label> <button>append</button></form>
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button title="append"><svg width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></form>
   <dialog id="edit-dialog">
     <form id="edit-form" method="dialog">
       <p id="edit-title"></p>
@@ -1836,7 +2023,7 @@ Then replace `.temp/name-list/main.js` with:
 
 ```js
 import { signal, computed, effect, batch } from '@preact/signals-core';
-import { html, render } from 'lit-html';
+import { html, svg, render } from 'lit-html';
 
 // Model state: the names, in order
 const model = { names: signal([]) };
@@ -1910,6 +2097,17 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 // --------------- name list
 const nameRows = document.querySelector('#name-rows');
 
+// The buttons' icons: line drawings on a 24 × 24 grid, stroked in the button's text color (currentColor), so a
+// disabled button's icon grays out with its text would. svg`…` makes SVG pieces, as html`…` makes HTML ones.
+const icon = paths => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const icons = {
+  edit: icon(svg`<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>`),
+  up: icon(svg`<path d="m18 15-6-6-6 6"/>`),
+  down: icon(svg`<path d="m6 9 6 6 6-6"/>`),
+  delete: icon(svg`<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`),
+};
+
 // Gesture settings: change these until a swipe feels right
 const MOVE_PX = 10;   // a finger must move this far sideways before the row follows it, so a tap stays a tap
 const OPEN_PX = 80;   // the width of an open row's Delete button
@@ -1922,11 +2120,20 @@ let press = null;             // the finger on a name: { pointerId, index, x, fr
 // Build 8's updateAnimated, grown: in one view transition, apply cmd, if any, open row openIndex, if any (any
 // change to the list closes an open row, whose index may now be another name's), and let go of a swiped row
 function settle(cmd, openIndex = null) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    open.value = openIndex;
-    swipe.value = null;
-  }));
+  return document.startViewTransition({
+    update: () => batch(() => {
+      if (cmd) updateModel(cmd);
+      open.value = openIndex;
+      swipe.value = null;
+    }),
+    types: swipe.value ? ['swipe'] : [],   // the end of a swipe gets index.html's quicker animation
+  });
+}
+
+// A rename changes the row's view-transition-name, so in one transition the old row would fade out and the
+// renamed one fade in, without sliding: slide the row home first, and rename once that has finished
+function toggleVip(i) {
+  settle(null).finished.then(() => updateModel({ type: 'vip', index: i }));
 }
 
 function onPointerDown(e, i) {
@@ -1946,14 +2153,15 @@ function onPointerMove(e) {
 function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the browser took it over, to scroll
   if (e.pointerId !== press?.pointerId) return;
   const s = swipe.value, up = e.type === 'pointerup';
-  if (s && up && s.dx >= VIP_PX) settle({ type: 'vip', index: s.index });   // right past the line: toggle VIP
+  if (s && up && s.dx >= VIP_PX) toggleVip(s.index);                        // right past the line: toggle VIP
   else if (s) settle(null, up && s.dx <= -OPEN_PX / 2 ? s.index : null);   // left past halfway: the Delete button stays out
   press = null;
 }
 
-// The Delete button: grows from the row's right end, over the row's other buttons
-function deleteButton(i, width) {
-  return html`<button class="bin" style="width: ${width}px" @click=${() => settle({ type: 'delete', index: i })}>Delete</button>`;
+// The Delete button: rides at the row's right end, always OPEN_PX wide; the clip hides what the row hasn't uncovered
+function deleteButton(i) {
+  return html`<button class="bin" title="Delete" style="width: ${OPEN_PX}px"
+      @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>`;
 }
 
 nameRows.addEventListener('pointermove', onPointerMove);
@@ -1963,16 +2171,16 @@ nameRows.addEventListener('touchend', e => { if (e.target.closest('.name')) e.pr
 
 function row(name, i, names) {
   const dx = swipe.value?.index === i ? swipe.value.dx : i === open.value ? -OPEN_PX : 0;
-  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${Math.max(0, dx)}px 0"
+  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${dx}px 0"
       class=${dx >= VIP_PX ? 'toggling' : ''}>
     <td>${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
-      <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
-      ${dx < 0 ? deleteButton(i, -dx) : ''}
+      <button title="edit" @click=${() => onEdit(i, name)}>${icons.edit}</button>
+      <button title="up" ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>${icons.up}</button>
+      <button title="down" ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>${icons.down}</button>
+      <button title="delete" @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>
+      ${dx < 0 ? deleteButton(i) : ''}
     </td>
   </tr>`;
 }
@@ -1985,26 +2193,28 @@ effect(() => {
 ```
 
 - **`open` is a second view-only signal, beside `swipe`:** the index of the row whose Delete button is out, or `null`. A row is drawn from it, so it is a signal (Build 7's rule). It holds one index, so opening one row closes any other.
-- **The button grows; the row stays.** `deleteButton` draws the button `-dx` pixels wide, and `row` draws it only while `dx` is below 0. `position: absolute` takes it out of the layout and places it by its *containing block*, the nearest ancestor with a `position` of its own: here the last cell, which `position: relative` makes one without moving it. `right: 0` and `height: 100%` pin the button to that cell's right edge, full height, and `width` sets how far it reaches left, over the row's own buttons. Why not move the row, as Build 10 does: the table starts 8 px from the screen's left edge, so a row moved 80 px left would put its name off the screen, and there would be nothing left to swipe back. And since the button stays inside the row, it never widens the page.
-- **`press.from` lets one swipe code open and close.** It is where the button was when the finger landed: `-OPEN_PX` for an open row, 0 for a closed one. The swipe is then at `press.from + dx`, and for an open row, `Math.min(0, …)` keeps it to closing. Example: an open row, and the finger moves 20 px right: −80 + 20 = −60, so the button is 60 px wide. On a closed row, a right move is Build 11's VIP swipe: the row is drawn `Math.max(0, dx)` to the right, so only a right swipe moves it.
+- **The row moves, and the button rides along at its right end.** As in Build 10, the row follows the finger left. `row` draws the button only while `dx` is below 0, always `OPEN_PX` wide. `position: absolute` takes it out of the layout and places it by its *containing block*, the nearest ancestor with a `position` of its own: here the last cell, which `position: relative` makes one without moving it. `left: 100%` puts the button's left edge on that cell's right edge, the row's right end, and `height: 100%` makes it full height. The button moves with the row. Build 11's clipping `<div>`, whose right edge is where the row's end was, hides the part the row hasn't uncovered yet, so you see exactly the gap, and the page never widens.
+- **Why a fixed width.** The snap after you let go is a view transition, which moves a row as one picture: it can slide the picture, but it can only cross-fade what changes inside it. A button whose width followed the finger was, say, 60 px wide in the picture before and 80 px in the picture after, so a faint ghost appeared and the button jumped from 60 to 80 px partway through the snap. An iPhone screen recording showed exactly that, and so did Chrome. With a fixed width the two pictures differ only in where the row is, and the row slides in one move. One leftover: during the snap the browser draws its pictures above the page, outside the clip, so for a moment the button can show in the 8 px margin at the screen's edge.
+- **Build 9's wide name cell is what makes this work.** A row moved 80 px left must keep part of its name cell on screen, where a right swipe can start. Measured on a phone screen 390 px wide: the open row's name cell still reached 140 px in from the screen's left edge. A short name, like the number, slides off the left edge, as on the iPhone; the empty part of the cell is still there to swipe.
+- **`press.from` lets one swipe code open and close.** It is where the row was when the finger landed: `-OPEN_PX` for an open row, 0 for a closed one. The swipe is then at `press.from + dx`, and for an open row, `Math.min(0, …)` keeps it to closing. Example: an open row, and the finger moves 20 px right: −80 + 20 = −60, so the row is 60 px left, and 60 px of the button shows. On a closed row, a right move is Build 11's VIP swipe, which moves the row right.
 - **Let go past halfway, and the button stays out.** `onPointerEnd` compares it with half of `OPEN_PX`: 40 px or more opens the row, with the button 80 px wide; less closes it. Past `VIP_PX` to the right, it toggles VIP instead, as in Build 11. A `pointercancel` closes the row.
 - **The Delete button is the only way a swipe deletes now:** letting go never deletes, however far you swiped. Tapping the button calls `settle({ type: 'delete', index: i })`, and the row fades out with it.
 - **`settle` has a second parameter, `openIndex`,** the row to leave open. `openIndex = null` is a *default parameter*: a call that leaves the argument out gets `null`. The buttons and the form call `settle(cmd)`, so any change to the list closes an open row. That matters because `open` is an index: after a move or a delete, the same index can belong to another name.
-- **The end of a swipe is a view transition, as in Build 10.** The button is part of the row's picture, so its change shows as a cross-fade between the button before and after.
+- **The end of a swipe is a view transition, as in Build 10.** The button is part of the row's picture, so it slides with the row.
 
 What changed from Build 11:
 
-1. `index.html`'s `<style>` lost the red `deleting` row. The last cell is also `position: relative`, and the `bin` rule draws the Delete button.
+1. `index.html`'s `<style>` lost the red `deleting` row. The last cell is also `position: relative`, and the `bin` rule draws the Delete button past the row's right end.
 2. `DELETE_PX` became `OPEN_PX`, and the `open` signal joined the list section.
 3. `settle` takes `openIndex` and sets `open`.
-4. `press` keeps `from`, and `onPointerMove` keeps an open row to closing. `onPointerEnd` toggles VIP past the right-hand line, and otherwise opens or closes the row; `swipeCmd` is gone.
-5. `deleteButton` draws the Delete button. `row` moves a row only to the right, and draws the button in its last cell while it is out.
+4. `press` keeps `from`, and `onPointerMove` keeps an open row to closing. `onPointerEnd` toggles VIP past the right-hand line, and otherwise opens or closes the row.
+5. `deleteButton` draws the Delete button, a trash icon `OPEN_PX` wide, in the last cell while it is out.
 
 **Try it,** on a phone or with the device toolbar:
 
-- Append `Ann`, `Bob`, `Cy` and `Dee`. Swipe `Bob` left a little and let go: the button slides back in.
-- Swipe further, past 40 px: the button stays out. Tap it: Bob's row fades out.
-- Swipe `Cy` open, then swipe Cy's name right: the button goes back in, and the row doesn't go on to VIP. A short right swipe, under 40 px, leaves the button out.
+- Append `Ann`, `Bob`, `Cy` and `Dee`. Swipe `Bob` left a little and let go: the row slides back.
+- Swipe further, past 40 px: the row stays 80 px left, with the button in the gap. Tap it: Bob's row fades out.
+- Swipe `Cy` open, then swipe right on the part of Cy's name cell still on screen: the row slides back, and doesn't go on to VIP. A short right swipe, under 40 px, leaves it open.
 - Swipe a closed row right past the line: VIP toggles, as in Build 11.
 - Swipe a row open, then tap up on another row: the button closes, and the rows move.
 - Change `OPEN_PX` to `120` and reload: a wider button, which covers more of the row.
@@ -2017,7 +2227,7 @@ What changed from Build 11:
 <summary>Read, code, notes, try it</summary>
 <br>
 
-The right swipe gets a button too. Swipe a name right, and the row slides right, with a VIP button in the gap it leaves; let go past halfway and the button stays. Tap it: a regular name gets " VIP", and a VIP name loses it. The button shows which it will do: gold `VIP` to add, gray `Not VIP` to take off. A left swipe puts it away. The model is Build 11's, with one rule pulled out.
+The right swipe gets a button too. Swipe a name right, and the row slides right, with a VIP button, a star, in the gap it leaves; let go past halfway and the button stays. Tap it: a regular name gets " VIP", and a VIP name loses it. The button's color shows which it will do: gold to add, gray to take off; its `title` says `VIP` or `Not VIP`. A left swipe puts it away. The model is Build 11's, with one rule pulled out.
 
 **Read:** MDN [Class selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/Class_selectors): the introduction and the examples.
 
@@ -2025,13 +2235,17 @@ The right swipe gets a button too. Swipe a name right, and the row slides right,
 
 ```html
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; }
     #name-rows td:first-child { position: relative; }
     #name-rows td:last-child { white-space: nowrap; position: relative; }
-    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; white-space: nowrap; }
-    #name-rows .bin { right: 0; background: #a33; color: #eee; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
+    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; }
+    #name-rows .bin { left: 100%; background: #a33; color: #eee; }
     #name-rows .vip { right: 100%; background: #fc0; color: #333; }
     #name-rows .vip.off { background: #777; color: #eee; }
   </style>
@@ -2048,13 +2262,17 @@ The right swipe gets a button too. Swipe a name right, and the row slides right,
   <meta name="viewport" content="width=device-width">
   <title>Names</title>
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; }
     #name-rows td:first-child { position: relative; }
     #name-rows td:last-child { white-space: nowrap; position: relative; }
-    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; white-space: nowrap; }
-    #name-rows .bin { right: 0; background: #a33; color: #eee; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
+    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; }
+    #name-rows .bin { left: 100%; background: #a33; color: #eee; }
     #name-rows .vip { right: 100%; background: #fc0; color: #333; }
     #name-rows .vip.off { background: #777; color: #eee; }
   </style>
@@ -2067,7 +2285,8 @@ The right swipe gets a button too. Swipe a name right, and the row slides right,
   <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 </head>
 <body>
-  <form id="name-form"><label>Name: <input id="name-box"></label> <button>append</button></form>
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button title="append"><svg width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></form>
   <dialog id="edit-dialog">
     <form id="edit-form" method="dialog">
       <p id="edit-title"></p>
@@ -2093,7 +2312,7 @@ Then replace `.temp/name-list/main.js` with:
 
 ```js
 import { signal, computed, effect, batch } from '@preact/signals-core';
-import { html, render } from 'lit-html';
+import { html, svg, render } from 'lit-html';
 
 // Model state: the names, in order
 const model = { names: signal([]) };
@@ -2170,6 +2389,18 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 // --------------- name list
 const nameRows = document.querySelector('#name-rows');
 
+// The buttons' icons: line drawings on a 24 × 24 grid, stroked in the button's text color (currentColor), so a
+// disabled button's icon grays out with its text would. svg`…` makes SVG pieces, as html`…` makes HTML ones.
+const icon = paths => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const icons = {
+  edit: icon(svg`<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>`),
+  up: icon(svg`<path d="m18 15-6-6-6 6"/>`),
+  down: icon(svg`<path d="m6 9 6 6 6-6"/>`),
+  delete: icon(svg`<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`),
+  vip: icon(svg`<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>`),
+};
+
 // Gesture settings: change these until a swipe feels right
 const MOVE_PX = 10;   // a finger must move this far sideways before the row follows it, so a tap stays a tap
 const OPEN_PX = 80;   // the width of an open row's Delete or VIP button
@@ -2181,11 +2412,20 @@ let press = null;             // the finger on a name: { pointerId, index, x, fr
 // Build 8's updateAnimated, grown: in one view transition, apply cmd, if any, open openRow, if any (any change
 // to the list closes an open row, whose index may now be another name's), and let go of a swiped row
 function settle(cmd, openRow = null) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    open.value = openRow;
-    swipe.value = null;
-  }));
+  return document.startViewTransition({
+    update: () => batch(() => {
+      if (cmd) updateModel(cmd);
+      open.value = openRow;
+      swipe.value = null;
+    }),
+    types: swipe.value ? ['swipe'] : [],   // the end of a swipe gets index.html's quicker animation
+  });
+}
+
+// A rename changes the row's view-transition-name, so in one transition the old row would fade out and the
+// renamed one fade in, without sliding: slide the row home first, and rename once that has finished
+function toggleVip(i) {
+  settle(null).finished.then(() => updateModel({ type: 'vip', index: i }));
 }
 
 function onPointerDown(e, i) {
@@ -2216,16 +2456,17 @@ function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the
   press = null;
 }
 
-// The Delete button: grows from the row's right end, over the row's other buttons
-function deleteButton(i, width) {
-  return html`<button class="bin" style="width: ${width}px" @click=${() => settle({ type: 'delete', index: i })}>Delete</button>`;
+// The Delete button: rides at the row's right end, always OPEN_PX wide; the clip hides what the row hasn't uncovered
+function deleteButton(i) {
+  return html`<button class="bin" title="Delete" style="width: ${OPEN_PX}px"
+      @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>`;
 }
 
-// The VIP button: fills the gap at the row's left end; gold to make the name VIP, gray to take it back
-function vipButton(i, name, width) {
+// The VIP button: rides at the row's left end, always OPEN_PX wide; gold to make the name VIP, gray to take it back
+function vipButton(i, name) {
   const vip = isVip(name);
-  return html`<button class=${vip ? 'vip off' : 'vip'} style="width: ${width}px"
-      @click=${() => settle({ type: 'vip', index: i })}>${vip ? 'Not VIP' : 'VIP'}</button>`;
+  return html`<button class=${vip ? 'vip off' : 'vip'} title=${vip ? 'Not VIP' : 'VIP'} style="width: ${OPEN_PX}px"
+      @click=${() => toggleVip(i)}>${icons.vip}</button>`;
 }
 
 nameRows.addEventListener('pointermove', onPointerMove);
@@ -2235,15 +2476,15 @@ nameRows.addEventListener('touchend', e => { if (e.target.closest('.name')) e.pr
 
 function row(name, i, names) {
   const dx = swipe.value?.index === i ? swipe.value.dx : open.value?.index === i ? open.value.dx : 0;
-  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${Math.max(0, dx)}px 0">
-    <td>${dx > 0 ? vipButton(i, name, dx) : ''}${i + 1}</td>
+  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${dx}px 0">
+    <td>${dx > 0 ? vipButton(i, name) : ''}${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
-      <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
-      ${dx < 0 ? deleteButton(i, -dx) : ''}
+      <button title="edit" @click=${() => onEdit(i, name)}>${icons.edit}</button>
+      <button title="up" ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>${icons.up}</button>
+      <button title="down" ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>${icons.down}</button>
+      <button title="delete" @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>
+      ${dx < 0 ? deleteButton(i) : ''}
     </td>
   </tr>`;
 }
@@ -2255,24 +2496,24 @@ effect(() => {
 });
 ```
 
-- **The row moves right, and the VIP button fills the gap.** Unlike Delete, this button needs the row to move. It sits at the row's left end, where the No. and the name are, and growing over them would cover the name, the one place a swipe can start, so the button could never be put away. Moving the row right keeps the name on screen, and the clipping `<div>` cuts off the row's other end. The button is in the first cell, with `right: 100%`: its right edge sits on that cell's left edge, the row's left end, and it moves with the row. Its width is how far the row moved, `dx`, so it fills exactly the gap, from where the row's left end was to where it is.
+- **The VIP button mirrors the Delete button.** A right swipe moves the row right, and the button fills the gap at its left end. It is in the first cell, with `right: 100%`: its right edge sits on that cell's left edge, the row's left end, and it moves with the row. It is `OPEN_PX` wide, like the Delete button and for the same reason, and the clipping `<div>` hides the part the row hasn't uncovered yet, as it cuts off the row's other end.
 - **`open` now says which side:** `{ index, dx }`, with `dx` at `-OPEN_PX` for Delete and `OPEN_PX` for VIP, the same numbers a swipe uses. `press.from` reads it, and the move code keeps an open row to closing: `Math.min(0, …)` for Delete, `Math.max(0, …)` for VIP, so a swipe can't swing past closed to the other button. On let-go, `openAt` decides: past halfway either way, that side's button stays out.
 - **`isVip`: one rule, two readers.** The model and the VIP button both ask whether a name ends in " VIP", so the test moved into one small function next to the model. A copy of `name.endsWith(' VIP')` in the button would be a second place to keep in step.
-- **Two styles from one `class` slot.** `class=${vip ? 'vip off' : 'vip'}` gives the button the class `vip`, plus `off` for a VIP name. `.vip` draws it gold, and `.vip.off`, which matches only an element that has both classes, overrides the colors with gray. The label follows the same test: `VIP` or `Not VIP`.
+- **Two styles from one `class` slot.** `class=${vip ? 'vip off' : 'vip'}` gives the button the class `vip`, plus `off` for a VIP name. `.vip` draws it gold, and `.vip.off`, which matches only an element that has both classes, overrides the colors with gray. The `title` follows the same test, `VIP` or `Not VIP`; the icon is the same star either way.
 - **`deleteButton` and `vipButton`** each return one button's template, so `row` stays short: `vipButton` in the first cell while `dx` is above 0, `deleteButton` in the last while it is below. Their shared CSS, such as `position: absolute` and the full height, sits in one rule for both, and each keeps its own side and colors.
-- **The VIP button is the only way a swipe toggles VIP now,** as the Delete button is for deleting, so `VIP_PX` and the gold row are gone.
+- **The VIP button is the only way a swipe toggles VIP now,** as the Delete button is for deleting, so `VIP_PX` and the gold row are gone. Tapping it calls Build 11's `toggleVip`, so the row slides home before the name changes.
 
 What changed from Build 12:
 
 1. `index.html`'s `<style>`: the first cell is `position: relative`, the `bin` and `vip` buttons share one rule, and `vip` and `vip.off` give the VIP button its two styles. The `toggling` rule is gone.
 2. `isVip` sits by the model, which uses it in the `vip` case.
 3. `VIP_PX` is gone. `open` holds `{ index, dx }`, `settle`'s second parameter is that open row, and `press.from` reads its `dx`. `onPointerMove` keeps an open VIP button to closing too, and `openAt` decides what stays open on let-go.
-4. `vipButton` draws the VIP button, and `row` puts it in the first cell.
+4. `vipButton` draws the VIP button, a star, and `row` puts it in the first cell; `icons` gained the star.
 
 **Try it,** on a phone or with the device toolbar:
 
-- Append `Ann`, `Bob`, `Cy` and `Dee`. Swipe `Bob` right past 40 px: the row slides right, and a gold VIP button fills the gap. Tap it: `Bob VIP`, and the button closes.
-- Swipe `Bob VIP` right: the button is gray and says Not VIP. Tap it: `Bob`.
+- Append `Ann`, `Bob`, `Cy` and `Dee`. Swipe `Bob` right past 40 px: the row slides right, and a gold star button fills the gap. Tap it: the row slides home, then reads `Bob VIP`.
+- Swipe `Bob VIP` right: the star is on gray, and its title says Not VIP. Tap it: `Bob`.
 - Swipe a row's VIP button out, then swipe its name left: it goes back in. Swipe left again: the Delete button comes out.
 - Swipe a row open either way, then tap a button on another row: it closes.
 
@@ -2298,13 +2539,17 @@ Press a name and hold your finger still: after half a second its row grows a lit
 
 ```html
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; -webkit-user-select: none; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; -webkit-user-select: none; }
     #name-rows td:first-child { position: relative; }
     #name-rows td:last-child { white-space: nowrap; position: relative; }
-    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; white-space: nowrap; }
-    #name-rows .bin { right: 0; background: #a33; color: #eee; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
+    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; }
+    #name-rows .bin { left: 100%; background: #a33; color: #eee; }
     #name-rows .vip { right: 100%; background: #fc0; color: #333; }
     #name-rows .vip.off { background: #777; color: #eee; }
     #name-rows tr { transition: scale 0.15s; }
@@ -2323,13 +2568,17 @@ Press a name and hold your finger still: after half a second its row grows a lit
   <meta name="viewport" content="width=device-width">
   <title>Names</title>
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; -webkit-user-select: none; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; -webkit-user-select: none; }
     #name-rows td:first-child { position: relative; }
     #name-rows td:last-child { white-space: nowrap; position: relative; }
-    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; white-space: nowrap; }
-    #name-rows .bin { right: 0; background: #a33; color: #eee; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
+    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; }
+    #name-rows .bin { left: 100%; background: #a33; color: #eee; }
     #name-rows .vip { right: 100%; background: #fc0; color: #333; }
     #name-rows .vip.off { background: #777; color: #eee; }
     #name-rows tr { transition: scale 0.15s; }
@@ -2344,7 +2593,8 @@ Press a name and hold your finger still: after half a second its row grows a lit
   <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 </head>
 <body>
-  <form id="name-form"><label>Name: <input id="name-box"></label> <button>append</button></form>
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button title="append"><svg width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></form>
   <dialog id="edit-dialog">
     <form id="edit-form" method="dialog">
       <p id="edit-title"></p>
@@ -2370,7 +2620,7 @@ Then replace `.temp/name-list/main.js` with:
 
 ```js
 import { signal, computed, effect, batch } from '@preact/signals-core';
-import { html, render } from 'lit-html';
+import { html, svg, render } from 'lit-html';
 
 // Model state: the names, in order
 const model = { names: signal([]) };
@@ -2447,6 +2697,18 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 // --------------- name list
 const nameRows = document.querySelector('#name-rows');
 
+// The buttons' icons: line drawings on a 24 × 24 grid, stroked in the button's text color (currentColor), so a
+// disabled button's icon grays out with its text would. svg`…` makes SVG pieces, as html`…` makes HTML ones.
+const icon = paths => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const icons = {
+  edit: icon(svg`<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>`),
+  up: icon(svg`<path d="m18 15-6-6-6 6"/>`),
+  down: icon(svg`<path d="m6 9 6 6 6-6"/>`),
+  delete: icon(svg`<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`),
+  vip: icon(svg`<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>`),
+};
+
 // Gesture settings: change these until a swipe and a hold feel right
 const MOVE_PX = 10;    // a finger that moves less than this is still pressing: a tap stays a tap, and a hold survives a tremble
 const HOLD_MS = 500;   // how long a finger must press without moving before its row lifts
@@ -2460,12 +2722,21 @@ let press = null;             // the finger on a name: { pointerId, index, x, y,
 // Build 8's updateAnimated, grown: in one view transition, apply cmd, if any, open openRow, if any (any change
 // to the list closes an open row, whose index may now be another name's), and let go of a swiped or lifted row
 function settle(cmd, openRow = null) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    open.value = openRow;
-    swipe.value = null;
-    drag.value = null;
-  }));
+  return document.startViewTransition({
+    update: () => batch(() => {
+      if (cmd) updateModel(cmd);
+      open.value = openRow;
+      swipe.value = null;
+      drag.value = null;
+    }),
+    types: swipe.value ? ['swipe'] : [],   // the end of a swipe gets index.html's quicker animation
+  });
+}
+
+// A rename changes the row's view-transition-name, so in one transition the old row would fade out and the
+// renamed one fade in, without sliding: slide the row home first, and rename once that has finished
+function toggleVip(i) {
+  settle(null).finished.then(() => updateModel({ type: 'vip', index: i }));
 }
 
 function onPointerDown(e, i) {
@@ -2515,16 +2786,17 @@ function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the
   press = null;
 }
 
-// The Delete button: grows from the row's right end, over the row's other buttons
-function deleteButton(i, width) {
-  return html`<button class="bin" style="width: ${width}px" @click=${() => settle({ type: 'delete', index: i })}>Delete</button>`;
+// The Delete button: rides at the row's right end, always OPEN_PX wide; the clip hides what the row hasn't uncovered
+function deleteButton(i) {
+  return html`<button class="bin" title="Delete" style="width: ${OPEN_PX}px"
+      @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>`;
 }
 
-// The VIP button: fills the gap at the row's left end; gold to make the name VIP, gray to take it back
-function vipButton(i, name, width) {
+// The VIP button: rides at the row's left end, always OPEN_PX wide; gold to make the name VIP, gray to take it back
+function vipButton(i, name) {
   const vip = isVip(name);
-  return html`<button class=${vip ? 'vip off' : 'vip'} style="width: ${width}px"
-      @click=${() => settle({ type: 'vip', index: i })}>${vip ? 'Not VIP' : 'VIP'}</button>`;
+  return html`<button class=${vip ? 'vip off' : 'vip'} title=${vip ? 'Not VIP' : 'VIP'} style="width: ${OPEN_PX}px"
+      @click=${() => toggleVip(i)}>${icons.vip}</button>`;
 }
 
 nameRows.addEventListener('pointermove', onPointerMove);
@@ -2537,16 +2809,16 @@ function row(name, i, names) {
   const dx = swipe.value?.index === i ? swipe.value.dx : open.value?.index === i ? open.value.dx : 0;
   const lifted = drag.value?.index === i;
   const dy = lifted ? drag.value.dy : 0;
-  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${Math.max(0, dx)}px ${dy}px"
+  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${dx}px ${dy}px"
       class=${lifted ? 'lifted' : ''}>
-    <td>${dx > 0 ? vipButton(i, name, dx) : ''}${i + 1}</td>
+    <td>${dx > 0 ? vipButton(i, name) : ''}${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
-      <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
-      ${dx < 0 ? deleteButton(i, -dx) : ''}
+      <button title="edit" @click=${() => onEdit(i, name)}>${icons.edit}</button>
+      <button title="up" ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>${icons.up}</button>
+      <button title="down" ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>${icons.down}</button>
+      <button title="delete" @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>
+      ${dx < 0 ? deleteButton(i) : ''}
     </td>
   </tr>`;
 }
@@ -2565,13 +2837,13 @@ effect(() => {
 - **The lifted row** has the class `lifted`. `scale: 1.05` draws it at 105 % size and, like `translate`, moves nothing else; `transition: scale 0.15s` makes it grow over 0.15 s instead of jumping. Every row has a `translate`, even `0px 0px`, and that makes the browser draw each row as a layer of its own, stacked in page order, so a later row covers an earlier one. `z-index: 1` puts the lifted row on top. It works only on a *positioned* element, hence `position: relative`, which, with no offsets, leaves the row where it was.
 - **`-webkit-user-select: none`** on the name: on a phone, a long press on text selects it, and this turns that off, so a hold lifts the row instead. iPhone Safari knows only the `-webkit-` spelling, and Chrome and Firefox accept it as well.
 - **The page must not scroll under a lifted row.** `touch-action: pan-y` lets the browser scroll on a vertical move, and the browser reads it once, when the finger lands, so it can't be turned off when the row lifts. The touch events, which Build 10 used for `touchend`, still can: the browser waits for `touchmove` listeners before it scrolls, and `e.preventDefault()` in one cancels the scroll. That works from a listener on an element such as `nameRows`. Browsers make touch listeners on the window, the document and the body *passive* by default, unable to cancel, so that pages scroll without waiting for them.
-- **`dropIndex()` turns the drag into a place in the list:** the rows passed, `dy / height`, rounded to the nearest whole row and added to where the row started, then kept between 0 and the last index by `Math.max` and `Math.min`. Example: rows 23 px tall, as Chrome draws them here, and `Ann` at index 0 dragged 39 px down: 39 / 23 ≈ 1.7, rounded to 2, so she lands at index 2. Dragged 300 px in a list of 4: 0 + 13 = 13, kept to 3. It assumes every row is as tall as the lifted one, which holds while each name fits on one line.
+- **`dropIndex()` turns the drag into a place in the list:** the rows passed, `dy / height`, rounded to the nearest whole row and added to where the row started, then kept between 0 and the last index by `Math.max` and `Math.min`. Example: rows 30 px tall, as Chrome draws them here, and `Ann` at index 0 dragged 51 px down: 51 / 30 = 1.7, rounded to 2, so she lands at index 2. Dragged 300 px in a list of 4: 0 + 10 = 10, kept to 3. It assumes every row is as tall as the lifted one, which holds while each name fits on one line.
 - **`onPointerEnd` drops the row with `settle`,** which now also clears `drag`: in one view transition, the move is applied, so the lifted row slides from under the finger into its new place, and the rows it passed slide into theirs. A drop on its own place, or a `pointercancel`, moves nothing, and the row settles back. The drop leaves out `settle`'s second argument, so it also closes an open Delete or VIP button.
-- **Tuning the feel.** The gesture settings at the top of the list section, and two values in `index.html`:
+- **Tuning the feel.** The gesture settings at the top of the list section, and three values in `index.html`:
   - `HOLD_MS`, 500: how long to hold before the row lifts. Shorter, and a row lifts when you only rested your finger before scrolling; longer, and reordering feels slow. Apple's long press waits the same 0.5 s by default ([`minimumPressDuration`](https://developer.apple.com/documentation/uikit/uilongpressgesturerecognizer/minimumpressduration)).
   - `MOVE_PX`, 10: how far a finger may drift and still count as holding still, and how far it must go before a swipe starts. Smaller, and the natural tremble of a fingertip cancels holds; larger, and swipes start late. Apple allows 10 points ([`allowableMovement`](https://developer.apple.com/documentation/uikit/uilongpressgesturerecognizer/allowablemovement)), which, with Build 9's viewport line, is 10 CSS pixels.
   - `OPEN_PX`, 80: the width of the Delete and VIP buttons, from Builds 12 and 13.
-  - In `index.html`, `scale: 1.05`, how much the lifted row grows, and `0.15s`, how fast.
+  - In `index.html`: `scale: 1.05`, how much the lifted row grows; `0.15s`, how fast; and Build 10's `0.25s`, how fast a swipe snaps.
 
 What changed from Build 13:
 
@@ -2603,13 +2875,17 @@ As on the iPhone, the rows step aside while you drag, so you see where the row w
 
 ```html
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; -webkit-user-select: none; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; -webkit-user-select: none; }
     #name-rows td:first-child { position: relative; }
     #name-rows td:last-child { white-space: nowrap; position: relative; }
-    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; white-space: nowrap; }
-    #name-rows .bin { right: 0; background: #a33; color: #eee; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
+    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; }
+    #name-rows .bin { left: 100%; background: #a33; color: #eee; }
     #name-rows .vip { right: 100%; background: #fc0; color: #333; }
     #name-rows .vip.off { background: #777; color: #eee; }
     #name-rows tr { transition: scale 0.15s; }
@@ -2629,13 +2905,17 @@ As on the iPhone, the rows step aside while you drag, so you see where the row w
   <meta name="viewport" content="width=device-width">
   <title>Names</title>
   <style>
-    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    :root { color-scheme: dark; touch-action: pan-x pan-y; } body { background: #333; color: #eee; max-width: 480px; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
-    #name-rows .name { overflow-wrap: anywhere; touch-action: pan-y; -webkit-user-select: none; }
+    :root:active-view-transition-type(swipe)::view-transition-group(*) { animation-duration: 0.25s; }
+    input { font-size: 16px; }
+    table { width: 100%; }
+    #name-rows .name { width: 100%; overflow-wrap: anywhere; touch-action: pan-y; -webkit-user-select: none; }
     #name-rows td:first-child { position: relative; }
     #name-rows td:last-child { white-space: nowrap; position: relative; }
-    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; white-space: nowrap; }
-    #name-rows .bin { right: 0; background: #a33; color: #eee; }
+    button { vertical-align: middle; } button svg { display: block; margin: auto; }
+    #name-rows .bin, #name-rows .vip { position: absolute; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; }
+    #name-rows .bin { left: 100%; background: #a33; color: #eee; }
     #name-rows .vip { right: 100%; background: #fc0; color: #333; }
     #name-rows .vip.off { background: #777; color: #eee; }
     #name-rows tr { transition: scale 0.15s; }
@@ -2651,7 +2931,8 @@ As on the iPhone, the rows step aside while you drag, so you see where the row w
   <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
 </head>
 <body>
-  <form id="name-form"><label>Name: <input id="name-box"></label> <button>append</button></form>
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button title="append"><svg width="20" height="20" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button></form>
   <dialog id="edit-dialog">
     <form id="edit-form" method="dialog">
       <p id="edit-title"></p>
@@ -2677,7 +2958,7 @@ Then replace `.temp/name-list/main.js` with:
 
 ```js
 import { signal, computed, effect, batch } from '@preact/signals-core';
-import { html, render } from 'lit-html';
+import { html, svg, render } from 'lit-html';
 
 // Model state: the names, in order
 const model = { names: signal([]) };
@@ -2754,6 +3035,18 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 // --------------- name list
 const nameRows = document.querySelector('#name-rows');
 
+// The buttons' icons: line drawings on a 24 × 24 grid, stroked in the button's text color (currentColor), so a
+// disabled button's icon grays out with its text would. svg`…` makes SVG pieces, as html`…` makes HTML ones.
+const icon = paths => html`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const icons = {
+  edit: icon(svg`<path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>`),
+  up: icon(svg`<path d="m18 15-6-6-6 6"/>`),
+  down: icon(svg`<path d="m6 9 6 6 6-6"/>`),
+  delete: icon(svg`<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`),
+  vip: icon(svg`<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>`),
+};
+
 // Gesture settings: change these until a swipe and a hold feel right
 const MOVE_PX = 10;    // a finger that moves less than this is still pressing: a tap stays a tap, and a hold survives a tremble
 const HOLD_MS = 500;   // how long a finger must press without moving before its row lifts
@@ -2767,12 +3060,21 @@ let press = null;             // the finger on a name: { pointerId, index, x, y,
 // Build 8's updateAnimated, grown: in one view transition, apply cmd, if any, open openRow, if any (any change
 // to the list closes an open row, whose index may now be another name's), and let go of a swiped or lifted row
 function settle(cmd, openRow = null) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    open.value = openRow;
-    swipe.value = null;
-    drag.value = null;
-  }));
+  return document.startViewTransition({
+    update: () => batch(() => {
+      if (cmd) updateModel(cmd);
+      open.value = openRow;
+      swipe.value = null;
+      drag.value = null;
+    }),
+    types: swipe.value ? ['swipe'] : [],   // the end of a swipe gets index.html's quicker animation
+  });
+}
+
+// A rename changes the row's view-transition-name, so in one transition the old row would fade out and the
+// renamed one fade in, without sliding: slide the row home first, and rename once that has finished
+function toggleVip(i) {
+  settle(null).finished.then(() => updateModel({ type: 'vip', index: i }));
 }
 
 function onPointerDown(e, i) {
@@ -2831,16 +3133,17 @@ function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the
   press = null;
 }
 
-// The Delete button: grows from the row's right end, over the row's other buttons
-function deleteButton(i, width) {
-  return html`<button class="bin" style="width: ${width}px" @click=${() => settle({ type: 'delete', index: i })}>Delete</button>`;
+// The Delete button: rides at the row's right end, always OPEN_PX wide; the clip hides what the row hasn't uncovered
+function deleteButton(i) {
+  return html`<button class="bin" title="Delete" style="width: ${OPEN_PX}px"
+      @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>`;
 }
 
-// The VIP button: fills the gap at the row's left end; gold to make the name VIP, gray to take it back
-function vipButton(i, name, width) {
+// The VIP button: rides at the row's left end, always OPEN_PX wide; gold to make the name VIP, gray to take it back
+function vipButton(i, name) {
   const vip = isVip(name);
-  return html`<button class=${vip ? 'vip off' : 'vip'} style="width: ${width}px"
-      @click=${() => settle({ type: 'vip', index: i })}>${vip ? 'Not VIP' : 'VIP'}</button>`;
+  return html`<button class=${vip ? 'vip off' : 'vip'} title=${vip ? 'Not VIP' : 'VIP'} style="width: ${OPEN_PX}px"
+      @click=${() => toggleVip(i)}>${icons.vip}</button>`;
 }
 
 nameRows.addEventListener('pointermove', onPointerMove);
@@ -2853,16 +3156,16 @@ function row(name, i, names) {
   const dx = swipe.value?.index === i ? swipe.value.dx : open.value?.index === i ? open.value.dx : 0;
   const lifted = drag.value?.index === i;
   const dy = drag.value ? offsetY(i) : 0;
-  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${Math.max(0, dx)}px ${dy}px"
+  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${dx}px ${dy}px"
       class=${lifted ? 'lifted' : drag.value ? 'parting' : ''}>
-    <td>${dx > 0 ? vipButton(i, name, dx) : ''}${i + 1}</td>
+    <td>${dx > 0 ? vipButton(i, name) : ''}${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
-      <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
-      ${dx < 0 ? deleteButton(i, -dx) : ''}
+      <button title="edit" @click=${() => onEdit(i, name)}>${icons.edit}</button>
+      <button title="up" ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>${icons.up}</button>
+      <button title="down" ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>${icons.down}</button>
+      <button title="delete" @click=${() => settle({ type: 'delete', index: i })}>${icons.delete}</button>
+      ${dx < 0 ? deleteButton(i) : ''}
     </td>
   </tr>`;
 }
@@ -2874,7 +3177,7 @@ effect(() => {
 });
 ```
 
-- **`offsetY(i)` says how far each row is drawn from its place during a drag.** The lifted row follows the finger, as in Build 14. A row it has passed steps one row toward the place the lifted row left: up if it passed going down, down if going up. The others stay. Example: `['Ann', 'Bob', 'Cy', 'Dee']`, rows 23 px tall, and `Ann` (index 0) dragged 39 px down, so `dropIndex()` is 2. `Bob` (1) and `Cy` (2) lie between 0 and 2, so each is drawn 23 px up: `Bob` into Ann's old place, `Cy` into Bob's. That leaves place 2 open, where Ann will land. `Dee` (3) stays.
+- **`offsetY(i)` says how far each row is drawn from its place during a drag.** The lifted row follows the finger, as in Build 14. A row it has passed steps one row toward the place the lifted row left: up if it passed going down, down if going up. The others stay. Example: `['Ann', 'Bob', 'Cy', 'Dee']`, rows 30 px tall, and `Ann` (index 0) dragged 51 px down, so `dropIndex()` is 2. `Bob` (1) and `Cy` (2) lie between 0 and 2, so each is drawn 30 px up: `Bob` into Ann's old place, `Cy` into Bob's. That leaves place 2 open, where Ann will land. `Dee` (3) stays.
 - **`dropIndex()` now has two readers,** the drop and `offsetY`, so the gap you see is where the row lands.
 - **Only the rows stepping aside glide.** During a drag, every row but the lifted one has the class `parting`, whose `transition: translate 0.2s` makes each change of its `translate` take 0.2 s. The lifted row has no such transition, so it follows the finger without lag.
 - **The class also keeps the drop from moving rows twice.** In the redraw at the drop, each `translate` goes back to 0 and `parting` goes away together, so the rows change without a transition. Nothing visibly jumps: `.map` keeps the `<tr>`s in place (Build 3), and each now shows the name that was drawn there during the drag. Each name is where it was on screen, so the view transition moves only the lifted row, into the gap.
