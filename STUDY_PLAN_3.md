@@ -217,6 +217,48 @@ The whole pattern is three moves: wrap the file-level state in a function, `retu
   <div id="app-factory-2"></div>
 ```
 
+<details>
+<summary>Complete index.html</summary>
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dot runner</title>
+  <script type="importmap">
+  { "imports": {
+      "lit-html": "./vendor/lit-html.js",
+      "@preact/signals-core": "./vendor/signals-core.mjs"
+  } }
+  </script>
+  <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
+  <style>
+    body { background: #333; color: #eee; }
+    .matrix { border-collapse: collapse; background: #111; }
+    .matrix td { width: 10px; height: 10px; border: 1px solid #333; }
+    .matrix td.on { background: #f33; }
+    output { font: 1.0em monospace; }
+  </style>
+</head>
+<body>
+  <p>Arrow keys move, Space stops.</p>
+  <h3>singleton</h3>
+  <div id="app-singleton"></div>
+  <h3>factory</h3>
+  <div id="app-factory"></div>
+  <div id="app-factory-2"></div>
+  <h3>class</h3>
+  <div id="app-class"></div>
+  <script type="module" src="./singleton/main.js"></script>
+  <script type="module" src="./factory/main.js"></script>
+  <script type="module" src="./class/main.js"></script>
+</body>
+</html>
+```
+
+</details>
+
 `factory/model.js` (with the step counter from Build 1):
 
 ```js
