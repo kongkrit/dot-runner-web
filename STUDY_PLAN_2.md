@@ -1,10 +1,10 @@
 [README.md](README.md) · [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) · [STUDY_PLAN_1.md](STUDY_PLAN_1.md) · [STUDY_PLAN_3.md](STUDY_PLAN_3.md)
 
-# Study plan 2: a name list, eleven builds
+# Study plan 2: a name list, twelve builds
 
 The goal: see lit-html do the job it is made for. In [STUDY_PLAN_1.md](STUDY_PLAN_1.md)'s Build 5, the form's elements never change, only their text does, and Build 4's effects already handled that, so lit-html added little. Here the data decides how many rows the page has and in what order: rows appear, disappear and move. That is where hand-written DOM code grows with every feature, and lit-html code doesn't.
 
-You build one small app, a list of names, in eleven steps, one per build:
+You build one small app, a list of names, in twelve steps, one per build:
 
 1. append a name;
 2. delete a row;
@@ -14,11 +14,12 @@ You build one small app, a list of names, in eleven steps, one per build:
 6. the same, with a Set, which finds a name without searching;
 7. edit a name in a pop-up dialog instead of in place;
 8. animate the rows as they appear, disappear and move;
-9. delete a row by swiping it right;
-10. move a row by holding it and dragging it;
-11. make the other rows step aside while you drag.
+9. delete a row by swiping it left;
+10. make that swipe show a Delete button instead;
+11. move a row by holding it and dragging it;
+12. make the other rows step aside while you drag.
 
-Builds 5 and 6 change only the model, so the view stays Build 4's. Build 7 changes only how a name is edited, and Build 8 only animates the changes. Builds 9 to 11 add touch gestures for a phone; the buttons stay.
+Builds 5 and 6 change only the model, so the view stays Build 4's. Build 7 changes only how a name is edited, and Build 8 only animates the changes. Builds 9 to 12 add touch gestures for a phone; the buttons stay.
 
 What never changes, the form and the table's caption and header, stays in `index.html`, written once. lit-html draws only the table's rows. Each build has STUDY_PLAN_1's three parts, in one `main.js`: a **model**, which holds the names and the one function that changes them; a **view**, which draws the rows; and a **controller**, the listeners that turn clicks and key presses into model updates. The code is grouped as in STUDY_PLAN_1's Build 4: the model at the top, then one section per component.
 
@@ -30,9 +31,9 @@ Each build has three steps: **read** the listed sections, in order; then copy th
 - **Name List:** a table with the columns **No.** (1, 2, 3, …) and **Name**. When it is empty, it says "No names yet".
 - Each row ends in buttons, one kind more per build: **delete** (Build 2); **up** and **down**, which swap the row with its neighbor (Build 3); and **edit**, placed first, which turns the name into a text box, where leaving the box or pressing Enter saves the new name and Escape puts the old one back (Build 4). Build 7's edit opens a pop-up dialog instead, with **Ok**, which saves; **Revert**, which puts the old name back in the box; and **Cancel**, which closes the dialog without saving.
 - From Build 8 on, a new row fades in, a deleted one fades out, and a moved one slides to its new place.
-- From Build 9 on, a finger can do the same without the buttons: swipe a name right to delete its row, and, from Build 10, hold a name still for half a second, then drag its row up or down. A mouse still uses the buttons.
+- From Build 9 on, a finger can do the same without the buttons: swipe a name left to delete its row; from Build 10, that swipe shows a Delete button to tap instead, and a swipe right puts it away; from Build 11, hold a name still for half a second, then drag its row up or down. A mouse still uses the buttons.
 
-The app's state is one value, `names`, an array of strings held in a signal. Build 4 adds a second signal, which belongs to the view, not the model: which row is being edited. Build 7 keeps that in a plain variable instead, since nothing on the screen is drawn from it. Builds 9 and 10 add two more signals of the view's own: the row being swiped, and the row being dragged.
+The app's state is one value, `names`, an array of strings held in a signal. Build 4 adds a second signal, which belongs to the view, not the model: which row is being edited. Build 7 keeps that in a plain variable instead, since nothing on the screen is drawn from it. Builds 9 to 11 add three more signals of the view's own: the row being swiped, the row whose Delete button is out, and the row being dragged.
 
 ## Setup
 
@@ -42,7 +43,7 @@ From the repo root:
 mkdir -p .temp/name-list && cp -r vendor .temp/name-list/
 ```
 
-Then create `.temp/name-list/index.html`, the same for Builds 1 to 6 (Build 7 adds a dialog to it, Build 8 one CSS rule, and Builds 9 to 11 a viewport line and a few more rules):
+Then create `.temp/name-list/index.html`, the same for Builds 1 to 6 (Build 7 adds a dialog to it, Build 8 one CSS rule, and Builds 9 to 12 a viewport line and a few more rules):
 
 ```html
 <!doctype html>
@@ -1027,14 +1028,14 @@ What changed from Build 7:
 - Edit a name in the dialog and click Ok: it changes without animation.
 - **The escape:** append `Ann Lee` and move her: she slides like the others. Now change `row-${CSS.escape(name)}` to `row-${name}`, reload and do it again: `Ann Lee` fades out of one row and into the other, while the name she swaps with slides. Put it back.
 
-## Build 9: swipe right to delete
+## Build 9: swipe left to delete
 
-On a phone, swipe a name to the right: its row follows the finger and turns red past a line. Let go past the line and the row is deleted; let go before it and the row slides back. Only a finger swipes; a mouse still uses the buttons. The model is Build 8's.
+On a phone, swipe a name to the left: its row follows the finger and turns red past a line. Let go past the line and the row is deleted; let go before it and the row slides back. Only a finger swipes; a mouse still uses the buttons. The model is Build 8's.
 
 **Read:**
 
 1. MDN [Pointer events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events): the introduction, then [Pointer capture](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events#pointer_capture) and [touch-action CSS property](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events#touch-action_css_property).
-2. MDN: the [`pointercancel` event](https://developer.mozilla.org/en-US/docs/Web/API/Element/pointercancel_event), and CSS [`touch-action`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/touch-action) and [`translate`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/translate).
+2. MDN: the [`pointercancel` event](https://developer.mozilla.org/en-US/docs/Web/API/Element/pointercancel_event), the [`touchend` event](https://developer.mozilla.org/en-US/docs/Web/API/Element/touchend_event), and CSS [`touch-action`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/touch-action) and [`translate`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/translate).
 3. MDN [`<meta name="viewport">`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/viewport): the introduction.
 
 **Code:** in `.temp/name-list/index.html`, add this line under `<meta charset="utf-8">`:
@@ -1139,18 +1140,12 @@ function updateModel(cmd) {
   }
 }
 
-// --------------- view transitions
-// Update the model, and let the browser animate the page from its old look to its new one
-function updateAnimated(cmd) {
-  document.startViewTransition(() => updateModel(cmd));
-}
-
 // --------------- name form
 const nameForm = document.querySelector('#name-form');
 const nameBox = document.querySelector('#name-box');
 nameForm.addEventListener('submit', e => {
   e.preventDefault();   // a form's default is to send itself to the server, which reloads the page
-  updateAnimated({ type: 'append', name: nameBox.value });
+  settle({ type: 'append', name: nameBox.value });
   nameBox.value = '';
 });
 
@@ -1179,11 +1174,20 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 const nameRows = document.querySelector('#name-rows');
 
 // Gesture settings: change these until a swipe feels right
-const MOVE_PX = 10;      // a finger must move this far right before the row follows it, so a tap stays a tap
-const DELETE_PX = 100;   // a row swiped at least this far right is deleted when the finger lifts
+const MOVE_PX = 10;      // a finger must move this far left before the row follows it, so a tap stays a tap
+const DELETE_PX = 100;   // a row swiped at least this far left is deleted when the finger lifts
 
-const swipe = signal(null);   // the view's own state: { index, dx }, the row being swiped and how far right, or null
+const swipe = signal(null);   // the view's own state: { index, dx }, the row being swiped and how far (dx < 0: left), or null
 let press = null;             // the finger on a name: { pointerId, index, x }; nothing is drawn from it
+
+// Build 8's updateAnimated, plus letting go of a swiped row: in one view transition, apply cmd, if any,
+// and clear swipe, so every row slides to its new place
+function settle(cmd) {
+  document.startViewTransition(() => batch(() => {
+    if (cmd) updateModel(cmd);
+    swipe.value = null;
+  }));
+}
 
 function onPointerDown(e, i) {
   if (e.pointerType !== 'touch' || press) return;   // fingers only, one at a time; a mouse uses the buttons
@@ -1193,39 +1197,32 @@ function onPointerDown(e, i) {
 function onPointerMove(e) {
   if (e.pointerId !== press?.pointerId) return;   // not the finger we follow
   const dx = e.clientX - press.x;
-  if (swipe.value || dx >= MOVE_PX) swipe.value = { index: press.index, dx: Math.max(0, dx) };   // right only
+  if (swipe.value || dx <= -MOVE_PX) swipe.value = { index: press.index, dx: Math.min(0, dx) };   // left only
 }
 
 function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the browser took it over, to scroll
   if (e.pointerId !== press?.pointerId) return;
   const s = swipe.value;
-  if (s) settle(e.type === 'pointerup' && s.dx >= DELETE_PX ? { type: 'delete', index: s.index } : null);
+  if (s) settle(e.type === 'pointerup' && s.dx <= -DELETE_PX ? { type: 'delete', index: s.index } : null);
   press = null;
-}
-
-// In one view transition, apply cmd, if any, and let go of the row: it slides home, or fades out if deleted
-function settle(cmd) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    swipe.value = null;
-  }));
 }
 
 nameRows.addEventListener('pointermove', onPointerMove);
 nameRows.addEventListener('pointerup', onPointerEnd);
 nameRows.addEventListener('pointercancel', onPointerEnd);
+nameRows.addEventListener('touchend', e => { if (e.target.closest('.name')) e.preventDefault(); });   // a touch on a name never becomes a click
 
 function row(name, i, names) {
   const dx = swipe.value?.index === i ? swipe.value.dx : 0;
   return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${dx}px 0"
-      class=${dx >= DELETE_PX ? 'deleting' : ''}>
+      class=${dx <= -DELETE_PX ? 'deleting' : ''}>
     <td>${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
       <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => updateAnimated({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => updateAnimated({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => updateAnimated({ type: 'delete', index: i })}>delete</button>
+      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
+      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
+      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
     </td>
   </tr>`;
 }
@@ -1238,13 +1235,65 @@ effect(() => {
 ```
 
 - ***Pointer events*** are one set of events for a mouse, a finger and a pen: `pointerdown` when it touches (for a mouse, when a button goes down), `pointermove` as it moves, `pointerup` when it lifts. `e.pointerType` says which kind it is, `e.clientX` how far from the window's left edge it is, in CSS pixels, and `e.pointerId` which one, since several fingers can be down at once. `onPointerDown` takes only a finger, and only one at a time; the other handlers ignore every pointer but that one.
-- **Only the name takes gestures.** Its cell has the class `name` and the `@pointerdown`. A gesture that started on a button could end in a click on it: in Chrome, a touch that moves 15 px still counts as a tap. The name cell has no click to set off. It also keeps swipes off the No. cell, at the screen's left edge, where a right swipe is Safari's "go back".
+- **Only the name takes gestures.** Its cell has the class `name` and the `@pointerdown`. A gesture that started on a button could end in a click on it: in Chrome, a touch that moves 15 px still counts as a tap. The name cell has no click to set off.
+- **A touch on a name never becomes a click.** Chrome also moves a tap that lands near a button onto the button: in a test, a finger that slid 15 px right from `Ann` and lifted clicked the edit button beside her, and the edit dialog opened. The `touchend` listener stops that. `touchend` is the older *touch event* for a lifting finger, sent after `pointerup`, and cancelling it with `preventDefault()` tells the browser not to turn the touch into a click.
 - **Where the listeners go.** `pointerdown` belongs to one name, so it sits in the template with its `i`, like the buttons' `@click`. Moving and lifting belong to whichever press is under way, so each has one listener on `nameRows`, added once. The browser *captures* a finger's pointer: its events keep going to the element it first touched, even after it slides off. They bubble up to `<tbody>`, so `nameRows` hears them.
 - **`touch-action: pan-y`** tells the browser which finger moves it keeps for itself: `pan-y` is a vertical pan, so a vertical swipe on a name still scrolls the page, and a sideways one is left to the code. Without it, the browser claims the sideways move too and sends `pointercancel` before the row has moved; the last **Try it** shows this. The rule is on the cell, because `touch-action` doesn't apply to table rows ([MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/touch-action)).
 - **`pointercancel`** is the browser saying "this finger is mine now", for example when it starts to scroll. `onPointerEnd` handles it like a lift, but never deletes on it.
 - **`swipe` is a signal, `press` a plain variable:** Build 7's rule again. The screen is drawn from how far the row is swiped, but nothing is drawn from where the finger landed. Every finger move writes `swipe`, so the effect redraws and logs `render`, about once per screen frame. lit-html compares the slots and rewrites one: the swiped row's `style`.
-- **The row follows the finger with `translate`:** `translate: 40px 0` draws the row 40 px to the right without moving anything else; the table's layout stays as it was. `Math.max(0, dx)` keeps it from going left. The swipe waits for `MOVE_PX`, 10 px, so a tap that wobbles a little isn't a swipe.
-- **`settle` ends a swipe in one view transition,** as Build 8's buttons do. The browser captures the row where the finger left it; then the callback deletes the name, if the row is past the line, and clears `swipe`, both in one `batch`, so the effect draws once. A deleted row's name is gone afterward, so it fades out where it was and the rows below slide up; a kept one slides home.
+- **The row follows the finger with `translate`:** `translate: -40px 0` draws the row 40 px to the left without moving anything else; the table's layout stays as it was. `dx` is negative to the left, and `Math.min(0, dx)` keeps it from going right. The swipe waits for `MOVE_PX`, 10 px, so a tap that wobbles a little isn't a swipe.
+- **Why left:** a row drawn past the right edge of the screen makes the page wider, and a phone then zooms out to fit it. In Chrome on a phone screen 390 px wide, a 150 px swipe to the right made the page 417 px wide, drawn at 0.94 of its size, and the whole page could be dragged around. Past the left edge, the row is just cut off, and the page stays 390 px. Left is also the iPhone's direction for delete. A row can also go right without widening the page: the fold below shows two fixes and compares them.
+
+<details>
+<summary>Swiping right without widening the page: two fixes</summary>
+
+Both fixes use `overflow-x: clip`, which cuts off whatever is drawn past an element's right edge and doesn't count it toward the page's width. With either one, a row swiped right is cut off 8 px from the screen's edge (`body`'s margin), and the page stays as wide as the screen.
+
+**Fix 1, a CSS rule:** add this to the `<style>` block in `index.html`:
+
+```css
+html, body { overflow-x: clip; }
+```
+
+**Fix 2, a `<div>` around the table:** in `index.html`, put the table inside a `<div>` that clips:
+
+```html
+  <div style="overflow-x: clip">
+    <table>
+      …
+    </table>
+  </div>
+```
+
+How they compare:
+
+| | Fix 1: `html, body { overflow-x: clip; }` | Fix 2: a `<div>` around the table |
+|---|---|---|
+| What changes | one CSS rule; the HTML stays as it is | one more element in the HTML |
+| What it clips | the whole page: anything drawn past the screen's right edge, anywhere, is cut off | only the table |
+| Where a swiped row is cut off | 8 px from the screen's edge | the same, because a `<div>` is as wide as `body`'s content |
+| A trap | it must name `html` as well: on `body` alone it does nothing (see below) | none |
+| Support | `overflow: clip`: Chrome 90+, Safari on iPhone 16+, Firefox 81+ | the same |
+
+**Which to pick:** Fix 2, for this page. It clips only the part that needs it, so anything else that someday reaches past the screen's edge isn't silently cut off, and it has no trap. Fix 1 is the quicker edit, and is fine on a page where nothing should ever be wider than the screen. Neither hides a row's buttons: even with a 35-letter name, the table stays within the screen, because the browser wraps the buttons onto more lines instead.
+
+What each place for the clip did during a 150 px right swipe, on a 390 px-wide phone screen emulated in Chromium:
+
+| Where the clip goes | Page width | Zoom | What you see |
+|---|---|---|---|
+| nothing | 417 px | 0.94 | the page grows and zooms out |
+| `body` only | 417 px | 0.94 | no effect |
+| **`html, body`** | 390 px | 1 | the row cut off 8 px from the screen's edge |
+| a `<div>` around the table | 390 px | 1 | the same, but it needs an extra element in the HTML |
+| `table { contain: paint }` | 390 px | 1 | the row cut off at the table's edge, mid-screen, which looks wrong |
+
+**Why `body` alone does nothing:** when `<html>` has no `overflow` of its own, the browser applies `body`'s setting to the whole window instead of to `body`. For the window, `clip` acts like `hidden`, which, as measured, still lets the page grow and zoom out. Setting it on `html` as well stops that hand-off, so `body` clips its own content.
+
+Neither fix was tested on a real iPhone, where Safari's zoom handling may differ.
+
+</details>
+
+- **`settle` replaces Build 8's `updateAnimated`.** It does the same, and also clears `swipe`, so one function serves the buttons, the form and the end of a swipe. At the end of a swipe, the browser captures the row where the finger left it; then the callback deletes the name, if the row is past the line, and clears `swipe`, both in one `batch`, so the effect draws once. A deleted row's name is gone afterward, so it fades out where it was and the rows below slide up; a kept one slides home. The form calls `settle`, which is written further down; that works, because the call happens only when the form is submitted, after the whole file has run.
 - **The `deleting` class** turns the row red from `DELETE_PX` on, so you see before you let go that it will be deleted.
 - **The viewport line.** Without it, a phone lays the page out 980 px wide, like a desktop screen, and shrinks it to fit. On an iPhone 390 points wide, everything is drawn at 390 / 980 ≈ 0.4 times its size, too small to touch. `width=device-width` makes one CSS pixel one *point*, Apple's unit for sizes on screen.
 - **To try it on a phone,** run the server as usual, find the computer's address with `hostname -I`, and open `http://<that address>:8001` on a phone on the same Wi-Fi. `http.server` listens on all of the computer's addresses, not only `localhost`; if the phone can't connect, a firewall may be blocking port 8001. **On the computer,** open Chrome's DevTools (F12) and click the device toolbar button (Ctrl+Shift+M): the mouse then acts as a finger.
@@ -1253,20 +1302,250 @@ What changed from Build 8:
 
 1. `index.html` has a viewport line, and its `<style>` became a block with two more rules.
 2. `batch` is back in the import.
-3. The list section has the gesture settings, the `swipe` signal, the `press` variable, three pointer handlers, `settle` and three listeners.
-4. `row` draws the swiped row with its `translate` and the `deleting` class, and the name cell, now class `name`, takes `pointerdown`.
+3. `updateAnimated` became `settle`, in the list section, which also lets go of a swiped row; the form and the buttons call it.
+4. The list section has the gesture settings, the `swipe` signal, the `press` variable, three pointer handlers and four listeners.
+5. `row` draws the swiped row with its `translate` and the `deleting` class, and the name cell, now class `name`, takes `pointerdown`.
 
 **Try it,** on a phone or with the device toolbar:
 
-- Append `Ann`, `Bob` and `Cy`. Swipe `Bob` right by about half a name's width and let go: the row slides back.
+- Append `Ann`, `Bob` and `Cy`. Swipe `Bob` left by about half a name's width and let go: the row slides back.
 - Swipe further: the row turns red. Let go: it fades out, and `Cy` slides up.
+- Swipe a name right: nothing moves.
 - Tap the buttons: they still work. Turn the device toolbar off and drag a name with the mouse: nothing moves.
 - Change `DELETE_PX` to `40`, then to `200`, and find the distance that feels right.
 - **Without `touch-action`:** delete the line `#name-rows .name { touch-action: pan-y; }` and reload. A swipe now leaves the row where it is: the browser took the finger with `pointercancel`. Put it back.
 
-## Build 10: hold to reorder
+## Build 10: swipe to show a Delete button
 
-Press a name and hold your finger still: after half a second its row grows a little and follows your finger up and down. Let go, and it drops into the nearest place while the view transition slides the rows into their new order. The swipe still works: a finger that moves right before the half second is up swipes instead.
+As on the iPhone, a swipe no longer deletes by itself. Swipe a name left, and a red Delete button slides out from the row's right end; let go past halfway and it stays out. Tap it to delete the row, or swipe the name right to put it away. The row's own delete button still works as before. The model is Build 8's.
+
+**Read:**
+
+1. MDN CSS [`position`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position): the introduction, and [`relative`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position#relative) and [`absolute`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position#absolute) under Values.
+2. MDN [Default parameters](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Default_parameters): the introduction.
+
+**Code:** in `.temp/name-list/index.html`, replace the `<style>` block with:
+
+```html
+  <style>
+    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    ::view-transition-group(*) { animation-duration: 0.5s; }
+    #name-rows .name { touch-action: pan-y; }
+    #name-rows td:last-child { position: relative; }
+    #name-rows .bin { position: absolute; right: 0; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
+  </style>
+```
+
+<details>
+<summary>Complete index.html</summary>
+
+```html
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Names</title>
+  <style>
+    :root { color-scheme: dark; } body { background: #333; color: #eee; }
+    ::view-transition-group(*) { animation-duration: 0.5s; }
+    #name-rows .name { touch-action: pan-y; }
+    #name-rows td:last-child { position: relative; }
+    #name-rows .bin { position: absolute; right: 0; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
+  </style>
+  <script type="importmap">
+  { "imports": {
+      "lit-html": "./vendor/lit-html.js",
+      "@preact/signals-core": "./vendor/signals-core.mjs"
+  } }
+  </script>
+  <!-- add console display --> <script src="./vendor/eruda.js"></script> <script> localStorage.removeItem('eruda-dev-tools'); localStorage.setItem('eruda-entry-button', '{"rememberPos":false}'); eruda.init({ tool: ['console'], defaults: { displaySize: 30, theme: 'Dark' } }); eruda.get('console').config.set('displayExtraInfo', true); eruda.show(); </script>
+</head>
+<body>
+  <form id="name-form"><label>Name: <input id="name-box"></label> <button>append</button></form>
+  <dialog id="edit-dialog">
+    <form id="edit-form" method="dialog">
+      <p id="edit-title"></p>
+      <p><input id="edit-box" autofocus></p>
+      <button>Ok</button> <button type="reset">Revert</button> <button id="edit-cancel" type="button">Cancel</button>
+    </form>
+  </dialog>
+  <table>
+    <caption>Name List</caption>
+    <thead><tr><th>No.</th><th>Name</th></tr></thead>
+    <tbody id="name-rows"></tbody>
+  </table>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
+```
+
+</details>
+
+Then replace `.temp/name-list/main.js` with:
+
+```js
+import { signal, computed, effect, batch } from '@preact/signals-core';
+import { html, render } from 'lit-html';
+
+// Model state: the names, in order
+const model = { names: signal([]) };
+
+// Derived value: the names as a Set, which finds a name without searching
+const taken = computed(() => {
+  console.log('taken');
+  return new Set(model.names.value);
+});
+
+// Update model: the only code that writes model.names; cmd says what to do
+function updateModel(cmd) {
+  const names = model.names.value;
+  const name = cmd.name?.trim();   // append and rename carry a name; for delete and move, ?. gives undefined
+  if (name === '') return;                                   // a blank name changes nothing,
+  if (name !== undefined && taken.value.has(name)) return;   // nor does one already in the list
+  switch (cmd.type) {
+    case 'append':
+      model.names.value = [...names, name];   // a new array, not push: see Build 1's notes
+      break;
+    case 'delete':
+      model.names.value = names.filter((_, i) => i !== cmd.index);   // keep every name but the one at cmd.index
+      break;
+    case 'move': {
+      const i = cmd.index, j = cmd.index + cmd.by;   // by is -1 (up) or +1 (down)
+      if (j < 0 || j >= names.length) break;          // the first name can't go up, nor the last down
+      model.names.value = names.with(i, names[j]).with(j, names[i]);   // swap the two
+      break;
+    }
+    case 'rename':
+      model.names.value = names.with(cmd.index, name);
+      break;
+  }
+}
+
+// --------------- name form
+const nameForm = document.querySelector('#name-form');
+const nameBox = document.querySelector('#name-box');
+nameForm.addEventListener('submit', e => {
+  e.preventDefault();   // a form's default is to send itself to the server, which reloads the page
+  settle({ type: 'append', name: nameBox.value });
+  nameBox.value = '';
+});
+
+// --------------- edit dialog
+const editDialog = document.querySelector('#edit-dialog');
+const editForm = document.querySelector('#edit-form');
+const editTitle = document.querySelector('#edit-title');
+const editBox = document.querySelector('#edit-box');
+const editCancel = document.querySelector('#edit-cancel');
+let editIndex;   // the row the dialog edits: a plain variable, since nothing is drawn from it
+
+function onEdit(i, name) {
+  editIndex = i;
+  editTitle.textContent = `Editing No. ${i + 1} Name: ${name}`;
+  editBox.value = name;
+  editBox.defaultValue = name;   // what Revert, a reset button, puts back
+  editDialog.showModal();   // until the dialog closes, the rest of the page ignores the mouse and keyboard
+}
+
+editForm.addEventListener('submit', () => {   // Ok, or Enter in the box; method="dialog" then closes the dialog
+  updateModel({ type: 'rename', index: editIndex, name: editBox.value });
+});
+editCancel.addEventListener('click', () => editDialog.close());   // Escape closes it too, with no code of ours
+
+// --------------- name list
+const nameRows = document.querySelector('#name-rows');
+
+// Gesture settings: change these until a swipe feels right
+const MOVE_PX = 10;   // a finger must move this far sideways before the row follows it, so a tap stays a tap
+const OPEN_PX = 80;   // the width of an open row's Delete button
+
+const swipe = signal(null);   // the view's own state: { index, dx }, the row being swiped and how far its Delete button is out (dx < 0), or null
+const open = signal(null);    // the view's own state: the index of the row showing its Delete button, or null
+let press = null;             // the finger on a name: { pointerId, index, x, from }; nothing is drawn from it
+
+// Build 8's updateAnimated, grown: in one view transition, apply cmd, if any, open row openIndex, if any (any
+// change to the list closes an open row, whose index may now be another name's), and let go of a swiped row
+function settle(cmd, openIndex = null) {
+  document.startViewTransition(() => batch(() => {
+    if (cmd) updateModel(cmd);
+    open.value = openIndex;
+    swipe.value = null;
+  }));
+}
+
+function onPointerDown(e, i) {
+  if (e.pointerType !== 'touch' || press) return;   // fingers only, one at a time; a mouse uses the buttons
+  press = { pointerId: e.pointerId, index: i, x: e.clientX, from: i === open.value ? -OPEN_PX : 0 };   // from: how far out its button was
+}
+
+function onPointerMove(e) {
+  if (e.pointerId !== press?.pointerId) return;   // not the finger we follow
+  const dx = e.clientX - press.x;
+  const opening = dx <= -MOVE_PX, closing = press.from < 0 && dx >= MOVE_PX;   // left opens; right closes an open row
+  if (swipe.value || opening || closing) swipe.value = { index: press.index, dx: Math.min(0, press.from + dx) };   // never less than closed
+}
+
+function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the browser took it over, to scroll
+  if (e.pointerId !== press?.pointerId) return;
+  const s = swipe.value;
+  if (s) settle(null, e.type === 'pointerup' && s.dx <= -OPEN_PX / 2 ? s.index : null);   // let go past halfway: open
+  press = null;
+}
+
+nameRows.addEventListener('pointermove', onPointerMove);
+nameRows.addEventListener('pointerup', onPointerEnd);
+nameRows.addEventListener('pointercancel', onPointerEnd);
+nameRows.addEventListener('touchend', e => { if (e.target.closest('.name')) e.preventDefault(); });   // a touch on a name never becomes a click
+
+function row(name, i, names) {
+  const dx = swipe.value?.index === i ? swipe.value.dx : i === open.value ? -OPEN_PX : 0;
+  return html`<tr style="view-transition-name: row-${CSS.escape(name)}">
+    <td>${i + 1}</td>
+    <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
+    <td>
+      <button @click=${() => onEdit(i, name)}>edit</button>
+      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
+      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
+      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
+      ${dx < 0 ? html`<button class="bin" style="width: ${-dx}px" @click=${() => settle({ type: 'delete', index: i })}>Delete</button>` : ''}
+    </td>
+  </tr>`;
+}
+
+effect(() => {
+  const names = model.names.value;
+  console.log('render');
+  render(names.length === 0 ? html`<tr><td colspan="2">No names yet</td></tr>` : names.map(row), nameRows);
+});
+```
+
+- **`open` is a third view-only signal:** the index of the row whose Delete button is out, or `null`. A row is drawn from it, so it is a signal (Build 7's rule). It holds one index, so opening one row closes any other.
+- **The button grows; the row stays.** `row` draws the button only while `dx` is below 0, `-dx` pixels wide. `position: absolute` takes it out of the layout and places it by its *containing block*, the nearest ancestor with a `position` of its own: here the last cell, which `position: relative` makes one without moving it. `right: 0` and `height: 100%` pin the button to that cell's right edge, full height, and `width` sets how far it reaches left, over the row's own buttons. Why not move the row, as Build 9 does: the table starts 8 px from the screen's left edge, so a row moved 80 px left would put its name off the screen, and there would be nothing left to swipe back. And since the button stays inside the row, it never widens the page.
+- **`press.from` lets one swipe code open and close.** It is where the button was when the finger landed: `-OPEN_PX` for an open row, 0 for a closed one. The button is then drawn `press.from + dx` out, and `Math.min(0, …)` keeps it from going in further than closed. A swipe starts on a move left, or, for an open row only, on a move right; a right move on a closed row does nothing. Example: an open row, and the finger moves 20 px right: −80 + 20 = −60, so the button is 60 px wide.
+- **Let go past halfway, and the button stays out.** `onPointerEnd` compares it with half of `OPEN_PX`: 40 px or more opens the row, with the button 80 px wide; less closes it. A `pointercancel` closes it.
+- **The Delete button is the only way a swipe deletes now:** letting go never deletes, however far you swiped. Tapping the button calls `settle({ type: 'delete', index: i })`, and the row fades out with it.
+- **`settle` has a second parameter, `openIndex`,** the row to leave open. `openIndex = null` is a *default parameter*: a call that leaves the argument out gets `null`. The buttons and the form call `settle(cmd)`, so any change to the list closes an open row. That matters because `open` is an index: after a move or a delete, the same index can belong to another name.
+- **The end of a swipe is a view transition, as in Build 9.** The button is part of the row's picture, so its change shows as a cross-fade between the button before and after.
+
+What changed from Build 9:
+
+1. `index.html`'s `<style>` lost the red `deleting` row, and has two new rules: the last cell is `position: relative`, and the `bin` rule draws the Delete button.
+2. `DELETE_PX` became `OPEN_PX`, and the `open` signal joined the list section.
+3. `settle` takes `openIndex` and sets `open`.
+4. `press` keeps `from`. `onPointerMove` swipes left, or right on an open row, and `onPointerEnd` opens or closes the row instead of deleting it.
+5. `row` no longer moves the swiped row; its last cell draws the Delete button while it is out.
+
+**Try it,** on a phone or with the device toolbar:
+
+- Append `Ann`, `Bob`, `Cy` and `Dee`. Swipe `Bob` left a little and let go: the button slides back in.
+- Swipe further, past 40 px: the button stays out. Tap it: Bob's row fades out.
+- Swipe `Cy` open, then swipe Cy's name right: the button goes back in. A short right swipe, under 40 px, leaves it out.
+- Swipe a row open, then tap up on another row: the button closes, and the rows move.
+- Change `OPEN_PX` to `120` and reload: a wider button, which covers more of the row.
+
+## Build 11: hold to reorder
+
+Press a name and hold your finger still: after half a second its row grows a little and follows your finger up and down. Let go, and it drops into the nearest place while the view transition slides the rows into their new order. The swipe still works: a finger that moves sideways before the half second is up swipes instead.
 
 **Read:**
 
@@ -1283,9 +1562,10 @@ Press a name and hold your finger still: after half a second its row grows a lit
     :root { color-scheme: dark; } body { background: #333; color: #eee; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
     #name-rows .name { touch-action: pan-y; -webkit-user-select: none; }
+    #name-rows td:last-child { position: relative; }
+    #name-rows .bin { position: absolute; right: 0; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
     #name-rows tr { transition: scale 0.15s; }
     #name-rows tr.lifted { scale: 1.05; background: #555; position: relative; z-index: 1; }
-    #name-rows tr.deleting { background: #a33; }
   </style>
 ```
 
@@ -1303,9 +1583,10 @@ Press a name and hold your finger still: after half a second its row grows a lit
     :root { color-scheme: dark; } body { background: #333; color: #eee; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
     #name-rows .name { touch-action: pan-y; -webkit-user-select: none; }
+    #name-rows td:last-child { position: relative; }
+    #name-rows .bin { position: absolute; right: 0; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
     #name-rows tr { transition: scale 0.15s; }
     #name-rows tr.lifted { scale: 1.05; background: #555; position: relative; z-index: 1; }
-    #name-rows tr.deleting { background: #a33; }
   </style>
   <script type="importmap">
   { "imports": {
@@ -1376,18 +1657,12 @@ function updateModel(cmd) {
   }
 }
 
-// --------------- view transitions
-// Update the model, and let the browser animate the page from its old look to its new one
-function updateAnimated(cmd) {
-  document.startViewTransition(() => updateModel(cmd));
-}
-
 // --------------- name form
 const nameForm = document.querySelector('#name-form');
 const nameBox = document.querySelector('#name-box');
 nameForm.addEventListener('submit', e => {
   e.preventDefault();   // a form's default is to send itself to the server, which reloads the page
-  updateAnimated({ type: 'append', name: nameBox.value });
+  settle({ type: 'append', name: nameBox.value });
   nameBox.value = '';
 });
 
@@ -1416,17 +1691,29 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 const nameRows = document.querySelector('#name-rows');
 
 // Gesture settings: change these until a swipe and a hold feel right
-const MOVE_PX = 10;      // a finger that moves less than this is still pressing: a tap stays a tap, and a hold survives a tremble
-const HOLD_MS = 500;     // how long a finger must press without moving before its row lifts
-const DELETE_PX = 100;   // a row swiped at least this far right is deleted when the finger lifts
+const MOVE_PX = 10;    // a finger that moves less than this is still pressing: a tap stays a tap, and a hold survives a tremble
+const HOLD_MS = 500;   // how long a finger must press without moving before its row lifts
+const OPEN_PX = 80;    // the width of an open row's Delete button
 
-const swipe = signal(null);   // the view's own state: { index, dx }, the row being swiped and how far right, or null
+const swipe = signal(null);   // the view's own state: { index, dx }, the row being swiped and how far its Delete button is out (dx < 0), or null
+const open = signal(null);    // the view's own state: the index of the row showing its Delete button, or null
 const drag = signal(null);    // the view's own state: { index, dy, height }, the lifted row, how far down it is (up is negative) and a row's height, or null
-let press = null;             // the finger on a name: { pointerId, index, x, y, height, timer }; nothing is drawn from it
+let press = null;             // the finger on a name: { pointerId, index, x, y, from, height, timer }; nothing is drawn from it
+
+// Build 8's updateAnimated, grown: in one view transition, apply cmd, if any, open row openIndex, if any (any
+// change to the list closes an open row, whose index may now be another name's), and let go of a swiped or lifted row
+function settle(cmd, openIndex = null) {
+  document.startViewTransition(() => batch(() => {
+    if (cmd) updateModel(cmd);
+    open.value = openIndex;
+    swipe.value = null;
+    drag.value = null;
+  }));
+}
 
 function onPointerDown(e, i) {
   if (e.pointerType !== 'touch' || press) return;   // fingers only, one at a time; a mouse uses the buttons
-  press = { pointerId: e.pointerId, index: i, x: e.clientX, y: e.clientY,
+  press = { pointerId: e.pointerId, index: i, x: e.clientX, y: e.clientY, from: i === open.value ? -OPEN_PX : 0,
             height: e.currentTarget.offsetHeight, timer: setTimeout(lift, HOLD_MS) };
 }
 
@@ -1442,7 +1729,8 @@ function onPointerMove(e) {
     return;
   }
   if (Math.abs(dx) >= MOVE_PX || Math.abs(dy) >= MOVE_PX) clearTimeout(press.timer);   // it moved, so it isn't a hold
-  if (swipe.value || dx >= MOVE_PX) swipe.value = { index: press.index, dx: Math.max(0, dx) };   // right only
+  const opening = dx <= -MOVE_PX, closing = press.from < 0 && dx >= MOVE_PX;   // left opens; right closes an open row
+  if (swipe.value || opening || closing) swipe.value = { index: press.index, dx: Math.min(0, press.from + dx) };   // never less than closed
 }
 
 // Where the lifted row would land: its own index plus the rows it has passed, rounded, kept inside the list
@@ -1456,37 +1744,30 @@ function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the
   clearTimeout(press.timer);
   const up = e.type === 'pointerup', d = drag.value, s = swipe.value;
   if (d) settle(up ? { type: 'move', index: d.index, by: dropIndex() - d.index } : null);
-  if (s) settle(up && s.dx >= DELETE_PX ? { type: 'delete', index: s.index } : null);
+  if (s) settle(null, up && s.dx <= -OPEN_PX / 2 ? s.index : null);   // let go past halfway: open
   press = null;
-}
-
-// In one view transition, apply cmd, if any, and let go of the row: it slides into place, or fades out if deleted
-function settle(cmd) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    swipe.value = null;
-    drag.value = null;
-  }));
 }
 
 nameRows.addEventListener('pointermove', onPointerMove);
 nameRows.addEventListener('pointerup', onPointerEnd);
 nameRows.addEventListener('pointercancel', onPointerEnd);
+nameRows.addEventListener('touchend', e => { if (e.target.closest('.name')) e.preventDefault(); });   // a touch on a name never becomes a click
 nameRows.addEventListener('touchmove', e => { if (drag.value) e.preventDefault(); });   // a lifted row moves, not the page
 
 function row(name, i, names) {
-  const dx = swipe.value?.index === i ? swipe.value.dx : 0;
+  const dx = swipe.value?.index === i ? swipe.value.dx : i === open.value ? -OPEN_PX : 0;
   const lifted = drag.value?.index === i;
   const dy = lifted ? drag.value.dy : 0;
-  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${dx}px ${dy}px"
-      class=${lifted ? 'lifted' : dx >= DELETE_PX ? 'deleting' : ''}>
+  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: 0 ${dy}px"
+      class=${lifted ? 'lifted' : ''}>
     <td>${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
       <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => updateAnimated({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => updateAnimated({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => updateAnimated({ type: 'delete', index: i })}>delete</button>
+      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
+      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
+      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
+      ${dx < 0 ? html`<button class="bin" style="width: ${-dx}px" @click=${() => settle({ type: 'delete', index: i })}>Delete</button>` : ''}
     </td>
   </tr>`;
 }
@@ -1500,38 +1781,38 @@ effect(() => {
 
 - **The model's `move` takes any number of places now.** `toSpliced(i, 1)` returns a copy of the array without the item at `i`, and `toSpliced(j, 0, x)` a copy with `x` put in at `j`; neither changes the original, which is what a signal needs (Build 1). Example: `['Ann', 'Bob', 'Cy', 'Dee']`, move index 0 by 2, so `j = 2`. Without Ann: `['Bob', 'Cy', 'Dee']`; Ann put in at 2: `['Bob', 'Cy', 'Ann', 'Dee']`. For a neighbor, `by` of -1 or +1, that is Build 3's swap, so up and down work as before. `j === i` joined the guard: a drop on the row's own place writes nothing.
 - **A hold is a timer that a move cancels.** `onPointerDown` starts `setTimeout(lift, HOLD_MS)`, which calls `lift` 500 ms later unless `clearTimeout` stops it first. `onPointerMove` stops it once the finger has moved `MOVE_PX` either way, and `onPointerEnd` stops it when the finger lifts. So `lift` runs only for a finger that stayed within 10 px for half a second.
-- **`lift` writes `drag`,** a second view-only signal like `swipe`: which row is lifted, how far the finger has moved since it went down (`dy`, negative going up), and the row's height, which `onPointerDown` measured with `offsetHeight`. Each move then writes `{ ...drag.value, dy }`: `...drag.value` copies every field into a new object, and `dy` replaces the old one, so the signal gets a new value (Build 1's rule).
+- **`lift` writes `drag`,** another view-only signal, like `swipe` and `open`: which row is lifted, how far the finger has moved since it went down (`dy`, negative going up), and the row's height, which `onPointerDown` measured with `offsetHeight`. Each move then writes `{ ...drag.value, dy }`: `...drag.value` copies every field into a new object, and `dy` replaces the old one, so the signal gets a new value (Build 1's rule).
 - **A swipe and a hold can't both happen.** A swipe starts only after a move of `MOVE_PX`, which has already stopped the timer, and once the row is lifted, `onPointerMove` returns before it reaches the swipe code.
 - **The lifted row** has the class `lifted`. `scale: 1.05` draws it at 105 % size and, like `translate`, moves nothing else; `transition: scale 0.15s` makes it grow over 0.15 s instead of jumping. Every row has a `translate`, even `0px 0px`, and that makes the browser draw each row as a layer of its own, stacked in page order, so a later row covers an earlier one. `z-index: 1` puts the lifted row on top. It works only on a *positioned* element, hence `position: relative`, which, with no offsets, leaves the row where it was.
 - **`-webkit-user-select: none`** on the name: on a phone, a long press on text selects it, and this turns that off, so a hold lifts the row instead. iPhone Safari knows only the `-webkit-` spelling, and Chrome and Firefox accept it as well.
-- **The page must not scroll under a lifted row.** `touch-action: pan-y` lets the browser scroll on a vertical move, and the browser reads it once, when the finger lands, so it can't be turned off when the row lifts. An older kind of event still can stop it: the browser waits for `touchmove` listeners before it scrolls, and `e.preventDefault()` in one cancels the scroll. That works from a listener on an element such as `nameRows`. Browsers make touch listeners on the window, the document and the body *passive* by default, unable to cancel, so that pages scroll without waiting for them.
+- **The page must not scroll under a lifted row.** `touch-action: pan-y` lets the browser scroll on a vertical move, and the browser reads it once, when the finger lands, so it can't be turned off when the row lifts. The touch events, which Build 9 used for `touchend`, still can: the browser waits for `touchmove` listeners before it scrolls, and `e.preventDefault()` in one cancels the scroll. That works from a listener on an element such as `nameRows`. Browsers make touch listeners on the window, the document and the body *passive* by default, unable to cancel, so that pages scroll without waiting for them.
 - **`dropIndex()` turns the drag into a place in the list:** the rows passed, `dy / height`, rounded to the nearest whole row and added to where the row started, then kept between 0 and the last index by `Math.max` and `Math.min`. Example: rows 23 px tall, as Chrome draws them here, and `Ann` at index 0 dragged 39 px down: 39 / 23 ≈ 1.7, rounded to 2, so she lands at index 2. Dragged 300 px in a list of 4: 0 + 13 = 13, kept to 3. It assumes every row is as tall as the lifted one, which holds while each name fits on one line.
-- **`onPointerEnd` drops the row with `settle`,** as Build 9 ends a swipe: in one view transition, the move is applied and `drag` cleared, so the lifted row slides from under the finger into its new place, and the rows it passed slide into theirs. A drop on its own place, or a `pointercancel`, moves nothing, and the row settles back.
+- **`onPointerEnd` drops the row with `settle`,** which now also clears `drag`: in one view transition, the move is applied, so the lifted row slides from under the finger into its new place, and the rows it passed slide into theirs. A drop on its own place, or a `pointercancel`, moves nothing, and the row settles back. The drop leaves out `openIndex`, so it also closes an open Delete button.
 - **Tuning the feel.** The gesture settings at the top of the list section, and two values in `index.html`:
   - `HOLD_MS`, 500: how long to hold before the row lifts. Shorter, and a row lifts when you only rested your finger before scrolling; longer, and reordering feels slow. Apple's long press waits the same 0.5 s by default ([`minimumPressDuration`](https://developer.apple.com/documentation/uikit/uilongpressgesturerecognizer/minimumpressduration)).
   - `MOVE_PX`, 10: how far a finger may drift and still count as holding still, and how far it must go before a swipe starts. Smaller, and the natural tremble of a fingertip cancels holds; larger, and swipes start late. Apple allows 10 points ([`allowableMovement`](https://developer.apple.com/documentation/uikit/uilongpressgesturerecognizer/allowablemovement)), which, with the viewport line, is 10 CSS pixels.
-  - `DELETE_PX`, 100: the swipe line, from Build 9.
+  - `OPEN_PX`, 80: the Delete button's width, from Build 10.
   - In `index.html`, `scale: 1.05`, how much the lifted row grows, and `0.15s`, how fast.
 
-What changed from Build 9:
+What changed from Build 10:
 
 1. The model's `move` takes any number of places, with `toSpliced`.
 2. `index.html`'s `<style>` stops the name's text from being selected and styles the lifted row.
-3. The list section has `HOLD_MS`, the `drag` signal, `lift`, `dropIndex` and a `touchmove` listener. `press` also keeps `y`, the row's height and the timer, and `onPointerMove` and `onPointerEnd` handle a lifted row.
-4. `row` draws the lifted row with its `translate` and the `lifted` class.
+3. The list section has `HOLD_MS`, the `drag` signal, `lift`, `dropIndex` and a `touchmove` listener. `press` also keeps `y`, the row's height and the timer; `settle` also clears `drag`; and `onPointerMove` and `onPointerEnd` handle a lifted row.
+4. `row` draws the lifted row with a vertical `translate` and the `lifted` class.
 
 **Try it,** on a phone or with the device toolbar:
 
 - Append `Ann`, `Bob`, `Cy` and `Dee`. Hold `Ann`'s name still: after half a second her row grows. Drag it down two rows and let go: she drops in at No. 3, and the rows slide into place.
 - Hold a name and let go without moving it: the row settles back.
-- Press a name and move down at once: no row lifts. Press and move right at once: the row swipes, as in Build 9.
+- Press a name and move down at once: no row lifts. Press and move left at once: its Delete button slides out, as in Build 10.
 - **Tune the feel:** set `HOLD_MS` to `200` and reload: rows lift when you meant to tap or scroll. Set it to `1000`: holding feels slow. Set `MOVE_PX` to `3`: holds fail because your finger trembles. Keep the values that feel right to you.
 
-## Build 11: rows part while you drag
+## Build 12: rows part while you drag
 
 As on the iPhone, the rows step aside while you drag, so you see where the row will land before you let go. Only the view changes.
 
-**Read:** nothing new. The CSS transition is the kind Build 10 read about.
+**Read:** nothing new. The CSS transition is the kind Build 11 read about.
 
 **Code:** in `.temp/name-list/index.html`, replace the `<style>` block with:
 
@@ -1540,10 +1821,11 @@ As on the iPhone, the rows step aside while you drag, so you see where the row w
     :root { color-scheme: dark; } body { background: #333; color: #eee; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
     #name-rows .name { touch-action: pan-y; -webkit-user-select: none; }
+    #name-rows td:last-child { position: relative; }
+    #name-rows .bin { position: absolute; right: 0; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
     #name-rows tr { transition: scale 0.15s; }
     #name-rows tr.lifted { scale: 1.05; background: #555; position: relative; z-index: 1; }
     #name-rows tr.parting { transition: translate 0.2s; }
-    #name-rows tr.deleting { background: #a33; }
   </style>
 ```
 
@@ -1561,10 +1843,11 @@ As on the iPhone, the rows step aside while you drag, so you see where the row w
     :root { color-scheme: dark; } body { background: #333; color: #eee; }
     ::view-transition-group(*) { animation-duration: 0.5s; }
     #name-rows .name { touch-action: pan-y; -webkit-user-select: none; }
+    #name-rows td:last-child { position: relative; }
+    #name-rows .bin { position: absolute; right: 0; top: 0; height: 100%; padding: 0; border: 0; overflow: hidden; background: #a33; color: #eee; }
     #name-rows tr { transition: scale 0.15s; }
     #name-rows tr.lifted { scale: 1.05; background: #555; position: relative; z-index: 1; }
     #name-rows tr.parting { transition: translate 0.2s; }
-    #name-rows tr.deleting { background: #a33; }
   </style>
   <script type="importmap">
   { "imports": {
@@ -1635,18 +1918,12 @@ function updateModel(cmd) {
   }
 }
 
-// --------------- view transitions
-// Update the model, and let the browser animate the page from its old look to its new one
-function updateAnimated(cmd) {
-  document.startViewTransition(() => updateModel(cmd));
-}
-
 // --------------- name form
 const nameForm = document.querySelector('#name-form');
 const nameBox = document.querySelector('#name-box');
 nameForm.addEventListener('submit', e => {
   e.preventDefault();   // a form's default is to send itself to the server, which reloads the page
-  updateAnimated({ type: 'append', name: nameBox.value });
+  settle({ type: 'append', name: nameBox.value });
   nameBox.value = '';
 });
 
@@ -1675,17 +1952,29 @@ editCancel.addEventListener('click', () => editDialog.close());   // Escape clos
 const nameRows = document.querySelector('#name-rows');
 
 // Gesture settings: change these until a swipe and a hold feel right
-const MOVE_PX = 10;      // a finger that moves less than this is still pressing: a tap stays a tap, and a hold survives a tremble
-const HOLD_MS = 500;     // how long a finger must press without moving before its row lifts
-const DELETE_PX = 100;   // a row swiped at least this far right is deleted when the finger lifts
+const MOVE_PX = 10;    // a finger that moves less than this is still pressing: a tap stays a tap, and a hold survives a tremble
+const HOLD_MS = 500;   // how long a finger must press without moving before its row lifts
+const OPEN_PX = 80;    // the width of an open row's Delete button
 
-const swipe = signal(null);   // the view's own state: { index, dx }, the row being swiped and how far right, or null
+const swipe = signal(null);   // the view's own state: { index, dx }, the row being swiped and how far its Delete button is out (dx < 0), or null
+const open = signal(null);    // the view's own state: the index of the row showing its Delete button, or null
 const drag = signal(null);    // the view's own state: { index, dy, height }, the lifted row, how far down it is (up is negative) and a row's height, or null
-let press = null;             // the finger on a name: { pointerId, index, x, y, height, timer }; nothing is drawn from it
+let press = null;             // the finger on a name: { pointerId, index, x, y, from, height, timer }; nothing is drawn from it
+
+// Build 8's updateAnimated, grown: in one view transition, apply cmd, if any, open row openIndex, if any (any
+// change to the list closes an open row, whose index may now be another name's), and let go of a swiped or lifted row
+function settle(cmd, openIndex = null) {
+  document.startViewTransition(() => batch(() => {
+    if (cmd) updateModel(cmd);
+    open.value = openIndex;
+    swipe.value = null;
+    drag.value = null;
+  }));
+}
 
 function onPointerDown(e, i) {
   if (e.pointerType !== 'touch' || press) return;   // fingers only, one at a time; a mouse uses the buttons
-  press = { pointerId: e.pointerId, index: i, x: e.clientX, y: e.clientY,
+  press = { pointerId: e.pointerId, index: i, x: e.clientX, y: e.clientY, from: i === open.value ? -OPEN_PX : 0,
             height: e.currentTarget.offsetHeight, timer: setTimeout(lift, HOLD_MS) };
 }
 
@@ -1701,7 +1990,8 @@ function onPointerMove(e) {
     return;
   }
   if (Math.abs(dx) >= MOVE_PX || Math.abs(dy) >= MOVE_PX) clearTimeout(press.timer);   // it moved, so it isn't a hold
-  if (swipe.value || dx >= MOVE_PX) swipe.value = { index: press.index, dx: Math.max(0, dx) };   // right only
+  const opening = dx <= -MOVE_PX, closing = press.from < 0 && dx >= MOVE_PX;   // left opens; right closes an open row
+  if (swipe.value || opening || closing) swipe.value = { index: press.index, dx: Math.min(0, press.from + dx) };   // never less than closed
 }
 
 // Where the lifted row would land: its own index plus the rows it has passed, rounded, kept inside the list
@@ -1724,37 +2014,30 @@ function onPointerEnd(e) {   // pointerup: the finger lifted; pointercancel: the
   clearTimeout(press.timer);
   const up = e.type === 'pointerup', d = drag.value, s = swipe.value;
   if (d) settle(up ? { type: 'move', index: d.index, by: dropIndex() - d.index } : null);
-  if (s) settle(up && s.dx >= DELETE_PX ? { type: 'delete', index: s.index } : null);
+  if (s) settle(null, up && s.dx <= -OPEN_PX / 2 ? s.index : null);   // let go past halfway: open
   press = null;
-}
-
-// In one view transition, apply cmd, if any, and let go of the row: it slides into place, or fades out if deleted
-function settle(cmd) {
-  document.startViewTransition(() => batch(() => {
-    if (cmd) updateModel(cmd);
-    swipe.value = null;
-    drag.value = null;
-  }));
 }
 
 nameRows.addEventListener('pointermove', onPointerMove);
 nameRows.addEventListener('pointerup', onPointerEnd);
 nameRows.addEventListener('pointercancel', onPointerEnd);
+nameRows.addEventListener('touchend', e => { if (e.target.closest('.name')) e.preventDefault(); });   // a touch on a name never becomes a click
 nameRows.addEventListener('touchmove', e => { if (drag.value) e.preventDefault(); });   // a lifted row moves, not the page
 
 function row(name, i, names) {
-  const dx = swipe.value?.index === i ? swipe.value.dx : 0;
+  const dx = swipe.value?.index === i ? swipe.value.dx : i === open.value ? -OPEN_PX : 0;
   const lifted = drag.value?.index === i;
   const dy = drag.value ? offsetY(i) : 0;
-  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: ${dx}px ${dy}px"
-      class=${lifted ? 'lifted' : drag.value ? 'parting' : dx >= DELETE_PX ? 'deleting' : ''}>
+  return html`<tr style="view-transition-name: row-${CSS.escape(name)}; translate: 0 ${dy}px"
+      class=${lifted ? 'lifted' : drag.value ? 'parting' : ''}>
     <td>${i + 1}</td>
     <td class="name" @pointerdown=${e => onPointerDown(e, i)}>${name}</td>
     <td>
       <button @click=${() => onEdit(i, name)}>edit</button>
-      <button ?disabled=${i === 0} @click=${() => updateAnimated({ type: 'move', index: i, by: -1 })}>up</button>
-      <button ?disabled=${i === names.length - 1} @click=${() => updateAnimated({ type: 'move', index: i, by: 1 })}>down</button>
-      <button @click=${() => updateAnimated({ type: 'delete', index: i })}>delete</button>
+      <button ?disabled=${i === 0} @click=${() => settle({ type: 'move', index: i, by: -1 })}>up</button>
+      <button ?disabled=${i === names.length - 1} @click=${() => settle({ type: 'move', index: i, by: 1 })}>down</button>
+      <button @click=${() => settle({ type: 'delete', index: i })}>delete</button>
+      ${dx < 0 ? html`<button class="bin" style="width: ${-dx}px" @click=${() => settle({ type: 'delete', index: i })}>Delete</button>` : ''}
     </td>
   </tr>`;
 }
@@ -1766,12 +2049,12 @@ effect(() => {
 });
 ```
 
-- **`offsetY(i)` says how far each row is drawn from its place during a drag.** The lifted row follows the finger, as in Build 10. A row it has passed steps one row toward the place the lifted row left: up if it passed going down, down if going up. The others stay. Example: `['Ann', 'Bob', 'Cy', 'Dee']`, rows 23 px tall, and `Ann` (index 0) dragged 39 px down, so `dropIndex()` is 2. `Bob` (1) and `Cy` (2) lie between 0 and 2, so each is drawn 23 px up: `Bob` into Ann's old place, `Cy` into Bob's. That leaves place 2 open, where Ann will land. `Dee` (3) stays.
+- **`offsetY(i)` says how far each row is drawn from its place during a drag.** The lifted row follows the finger, as in Build 11. A row it has passed steps one row toward the place the lifted row left: up if it passed going down, down if going up. The others stay. Example: `['Ann', 'Bob', 'Cy', 'Dee']`, rows 23 px tall, and `Ann` (index 0) dragged 39 px down, so `dropIndex()` is 2. `Bob` (1) and `Cy` (2) lie between 0 and 2, so each is drawn 23 px up: `Bob` into Ann's old place, `Cy` into Bob's. That leaves place 2 open, where Ann will land. `Dee` (3) stays.
 - **`dropIndex()` now has two readers,** the drop and `offsetY`, so the gap you see is where the row lands.
 - **Only the rows stepping aside glide.** During a drag, every row but the lifted one has the class `parting`, whose `transition: translate 0.2s` makes each change of its `translate` take 0.2 s. The lifted row has no such transition, so it follows the finger without lag.
 - **The class also keeps the drop from moving rows twice.** In the redraw at the drop, each `translate` goes back to 0 and `parting` goes away together, so the rows change without a transition. Nothing visibly jumps: `.map` keeps the `<tr>`s in place (Build 3), and each now shows the name that was drawn there during the drag. Each name is where it was on screen, so the view transition moves only the lifted row, into the gap.
 
-What changed from Build 10:
+What changed from Build 11:
 
 1. `index.html`'s `<style>` has a `parting` rule.
 2. `offsetY` joined the list section.
