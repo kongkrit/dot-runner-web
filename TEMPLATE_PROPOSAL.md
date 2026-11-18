@@ -18,7 +18,7 @@ This repo's `.claude/CLAUDE.md`, together with `.checks/boundaries.py` and two h
   - commit or push only when they ask, always straight to `main` and never on a branch;
   - non-trivial changes are planned first, and they often steer the plan;
   - they like being shown options with a recommendation;
-  - tooling goes in dot-prefixed folders (`.checks/`), so learners reading the repo are not distracted;
+  - tooling goes in dot-prefixed folders (`.checks/`, `.tools/`), so learners reading the repo are not distracted;
   - verify by actually running things (headless Chromium, real key presses) rather than assuming.
 - **They may run more than one Claude Code session in this repo at once.** Before editing shared files such as `CLAUDE.md`, check `git status`. If files change under you, stop and ask.
 
@@ -28,7 +28,6 @@ A red dot moves on a 16×8 grid in the last arrow-key direction pressed (Space s
 
 ```
 index.html     import map, CSS, #app-singleton / #app-factory / #app-class containers, one module script each
-serve.py       dev server: Python's http.server plus Cache-Control: no-store
 singleton/     each part exists once; state in file-level variables; parts are ready-made objects
   model-controller-common.js   Cmd only: the controller→model message (like the C `command` enum)
   model.js        exports `model` (signals at file level, read-only computeds, update(cmd))
@@ -49,10 +48,11 @@ class/         main.js creates every part with `new`; state in `#` private field
   main.js         new Model() / View / Controller; listener wrapped as e => controller.keydown(e)
 vendor/        lit-html 3.3.3 (lit-html.js), @preact/signals-core 1.14.5 (signals-core.mjs)
 .checks/       boundaries.py (the checker), stop-hook.sh (Stop hook wrapper)
+.tools/        serve.py (dev server: Python's http.server plus Cache-Control: no-store), plan_diffs.py (STUDY_PLAN_2's diffs)
 C/             the original C program
 ```
 
-- **Run it:** `uv run --no-project python serve.py`, then open <http://localhost:8000>. `serve.py` is Python's `http.server` plus `Cache-Control: no-store`, so browsers never reuse a stale copy.
+- **Run it:** `uv run --no-project python .tools/serve.py`, then open <http://localhost:8000>. `.tools/serve.py` is Python's `http.server` plus `Cache-Control: no-store`, so browsers never reuse a stale copy.
 - **Build:** there is no npm and no build step. The browser loads the vendored libraries as ES modules, through the import map in `index.html`.
 - **README.md** is a short front page: what the app is, how to run it, links to the other docs. **HOW_AND_WALKTHROUGH.md** explains everything for the learner. It has a "Code walkthrough" that copies each file in full, folded per folder, and a "Singleton vs factory vs class" section that compares all three: a three-column table of the obvious differences, subtle differences, pros and cons for each, a "Factory vs class" table and "Which to use". Read it to see how explanations are pitched.
 - **History worth knowing:**

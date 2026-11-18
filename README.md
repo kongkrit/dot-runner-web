@@ -7,15 +7,15 @@ A small project for learning [Preact Signals](https://github.com/preactjs/signal
 ## Run
 
 ```bash
-uv run --no-project python serve.py
+uv run --no-project python .tools/serve.py
 ```
 
 Open <http://localhost:8000>. Arrow keys move all three dots, Space stops them. The panel at the bottom is [Eruda](https://github.com/liriliri/eruda), an in-page console that shows `console.log` output and errors; its floating button hides it. Ctrl+C stops the server.
 
 - **Why a server:** Chrome refuses to load ES modules (`<script type="module">`) from a `file://` page, so opening `index.html` directly shows the headings but no grids.
-- **Why `--no-project`:** uv skips looking for a `pyproject.toml` and creates no venv. It just runs `serve.py`, which needs nothing installed.
-- **Why `serve.py`:** it is Python's built-in file server, `http.server`, plus one header on every reply, `Cache-Control: no-store`, which tells the browser to keep no copy. With the plain server, a browser may reuse a copy of a file it fetched earlier, so an edit doesn't show even after a reload, and a phone has no easy way to clear its cache. It takes a port and a folder, as in `serve.py 8001 .temp/name-list`; the study plans use that.
-- **Network exposure:** `serve.py` listens on every network interface, so a phone on your Wi-Fi can open the page, and so can any other machine on your network, which can browse the folder it serves, `.git/` included. To keep it to this machine, run `uv run --no-project python -m http.server 8000 --bind 127.0.0.1` instead, which leaves caching on.
+- **Why `--no-project`:** uv skips looking for a `pyproject.toml` and creates no venv. It just runs `.tools/serve.py`, which needs nothing installed.
+- **Why `.tools/serve.py`:** it is Python's built-in file server, `http.server`, plus one header on every reply, `Cache-Control: no-store`, which tells the browser to keep no copy. With the plain server, a browser may reuse a copy of a file it fetched earlier, so an edit doesn't show even after a reload, and a phone has no easy way to clear its cache. It takes a port and a folder, as in `.tools/serve.py 8001 .temp/name-list`; the study plans use that.
+- **Network exposure:** `.tools/serve.py` listens on every network interface, so a phone on your Wi-Fi can open the page, and so can any other machine on your network, which can browse the folder it serves, `.git/` included. To keep it to this machine, run `uv run --no-project python -m http.server 8000 --bind 127.0.0.1` instead, which leaves caching on.
 
 ## Documents
 

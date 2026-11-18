@@ -71,7 +71,7 @@ const template = () => html`
 render(template(), document.querySelector('#app'));
 ```
 
-From the repo root, run `uv run --no-project python serve.py 8001 .temp/hello-signals` and open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo.
+From the repo root, run `uv run --no-project python .tools/serve.py 8001 .temp/hello-signals` and open <http://localhost:8001>. Port 8001 leaves 8000 free for the repo.
 
 - `` html`…` `` is a template: HTML in backticks, with `${…}` slots that lit-html fills. It only describes the page; it changes nothing.
 - `template` is a function, so each call reads the current `count`. Written as `` const template = html`…` `` it would read `count` once, at 0, and keep that.
@@ -137,7 +137,7 @@ The loop from here on is: edit, save, reload. There is no build step. If a chang
 
 ## Step 1: singleton
 
-The same four blocks, split into the repo's five files. Run the repo (`uv run --no-project python serve.py` from its root) and keep the page open while you read.
+The same four blocks, split into the repo's five files. Run the repo (`uv run --no-project python .tools/serve.py` from its root) and keep the page open while you read.
 
 **Read:**
 

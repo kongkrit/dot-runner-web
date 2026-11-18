@@ -1046,6 +1046,8 @@ Use a **class** for the same jobs as a factory when there will be very many copi
 | `.claude/PROGRESS.md` | Latest session handoff, maintained by `/wrapup`; earlier ones: `git log -p --follow -- .claude/PROGRESS.md`. |
 | `.checks/boundaries.py` | Checks the MVC boundaries in CLAUDE.md's Architecture rules: who may import what, each folder only from itself; browser globals and `effect` only in `main.js`; signal writes only in `model.js`; `model.update` and the view used only from `main.js`; file-level changing state, and `static` class fields (shared by every instance), only in `singleton/`; the `model-controller-common.js` copies identical. Run `uv run --no-project python .checks/boundaries.py`. The `PostToolUse` hook runs it after every Edit or Write and tells Claude Code what it broke; it can't undo the edit, and shell edits skip it. |
 | `.checks/stop-hook.sh` | The `Stop` hook: runs the same check when Claude Code tries to finish a turn and, on a violation, sends it back to fix the code first. If the violation survives one round, it lets the turn end but shows you a warning, so it can't loop forever. |
+| `.tools/serve.py` | The dev server: Python's `http.server` plus `Cache-Control: no-store` on every reply, so a browser never shows a stale copy. Run `uv run --no-project python .tools/serve.py [port] [folder]` from the repo root (defaults: 8000, the current folder); see [Run](README.md#run). |
+| `.tools/plan_diffs.py` | Rewrites every `diff` block in STUDY_PLAN_2.md from the whole files folded under them, so the diffs are never written by hand. It leaves out changes in whitespace alone, such as a block indented deeper, so a diff shows only what the code does differently. Run `uv run --no-project python .tools/plan_diffs.py STUDY_PLAN_2.md` after editing a build. |
 | `.gitignore` | OS cruft, Python/uv venv, editor files, and everything in `.temp/` (the study plans' working folders) except `.placeholder`. |
 | `.vscode/settings.json` | VS Code workspace settings, tracked so they are shared: hides `.temp/.placeholder` from the Explorer. |
 | `.gitattributes` | LF line endings; binary file types; no line diffs for the minified `vendor/` files. |
@@ -1102,6 +1104,6 @@ docker buildx create --name multiarch --driver docker-container --bootstrap --us
 
 On Apple Silicon with OrbStack, emulation is built in, so only the second line is needed.
 
-**Not used.** `node`/`npm` (`serve.py`, built on Python's `http.server`, serves the page; see [Run](README.md#run)) and the .NET SDK.
+**Not used.** `node`/`npm` (`.tools/serve.py`, built on Python's `http.server`, serves the page; see [Run](README.md#run)) and the .NET SDK.
 
 </details>

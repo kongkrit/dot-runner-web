@@ -1,8 +1,8 @@
 # The dev server: Python's built-in file server, but every reply carries Cache-Control: no-store,
 # which tells the browser to keep no copy. Without it, a browser may reuse an old copy of a file
 # it fetched before, and a phone has no easy way to clear its cache.
-# Usage, from the repo root: uv run --no-project python serve.py [port] [folder]
-# (defaults: 8000 and the current folder). Ctrl+C stops it.
+# Usage, from the repo root: uv run --no-project python .tools/serve.py [port] [folder]
+# (defaults: 8000 and the current folder, not this script's). Ctrl+C stops it.
 import functools
 import http.server
 import sys
