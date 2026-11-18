@@ -108,12 +108,13 @@ Reference: the [signals-core 1.14.5 README](https://github.com/preactjs/signals/
 </details>
 
 <details open>
-<summary>lit-html: html, container, render</summary>
+<summary>lit-html: html, slot, container, render</summary>
 <br>
 
 References: the [Templates API page](https://lit.dev/docs/api/templates/) and the [lit-html 3.3.3 declaration file](https://cdn.jsdelivr.net/npm/lit-html@3.3.3/lit-html.d.ts).
 
 - **html**: a tag written in front of a backtick string, a *tagged template literal* (see the `view.js` walkthrough). It returns a description of the DOM and does not touch the page.
+- **slot**: each `${…}` in an `html` template, a place lit-html fills with a value. lit-html remembers the spot, so a later `render` can rewrite it alone. Between tags the value becomes text (never parsed as HTML), or elements if it is a template or an array. In a tag, `class=${…}` sets that attribute, and `?disabled=`, `.value=` and `@click=` add or remove a boolean attribute, set a property, or add an event listener.
 - **container**: the element that `render` draws into, here `<div id="app-singleton">`, `<div id="app-factory">` or `<div id="app-class">`. The rest of the page is untouched.
 - **render**: writes that description into a container. On later calls it reuses the DOM it built and goes slot by slot (each `${…}`, walking into nested templates and arrays), updating only the slots whose value changed.
 
