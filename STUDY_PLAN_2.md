@@ -1,23 +1,27 @@
 [README.md](README.md) · [HOW_AND_WALKTHROUGH.md](HOW_AND_WALKTHROUGH.md) · [STUDY_PLAN_1.md](STUDY_PLAN_1.md) · [STUDY_PLAN_3.md](STUDY_PLAN_3.md)
 
-# Study plan 2: a name list, four builds
+# Study plan 2: a name list, six builds
 
 The goal: see lit-html do the job it is made for. In [STUDY_PLAN_1.md](STUDY_PLAN_1.md)'s Build 5, the form's elements never change, only their text does, and Build 4's effects already handled that, so lit-html added little. Here the data decides how many rows the page has and in what order: rows appear, disappear and move. That is where hand-written DOM code grows with every feature, and lit-html code doesn't.
 
-You build one small app, a list of names, in four steps, one per build:
+You build one small app, a list of names, in six steps, one per build:
 
 1. append a name;
 2. delete a row;
 3. move a row up or down;
-4. edit a name in place.
+4. edit a name in place;
+5. refuse a name already in the list, by searching the array;
+6. the same, with a Set, which finds a name without searching.
+
+Builds 5 and 6 change only the model, so the view stays Build 4's.
 
 What never changes, the form and the table's caption and header, stays in `index.html`, written once. lit-html draws only the table's rows. Each build has STUDY_PLAN_1's three parts, in one `main.js`: a **model**, which holds the names and the one function that changes them; a **view**, which draws the rows; and a **controller**, the listeners that turn clicks and key presses into model updates. The code is grouped as in STUDY_PLAN_1's Build 4: the model at the top, then one section per component.
 
-Each build has three steps: **read** the listed sections, in order; then copy the code, run it and read the notes under it; then **try** the things listed. You write no code in this plan: every build is printed in full. It builds on STUDY_PLAN_1, so `signal`, `effect`, `batch`, `` html`…` ``, `render` and slots are not explained again.
+Each build has three steps: **read** the listed sections, in order; then copy the code, run it and read the notes under it; then **try** the things listed. You write no code in this plan: every build is printed in full. It builds on STUDY_PLAN_1, so `signal`, `computed`, `effect`, `batch`, `` html`…` ``, `render` and slots are not explained again.
 
 ## The app
 
-- **Name:** a text box and an **append** button. Clicking append, or pressing Enter in the box, adds the name to the end of the list and clears the box. A blank name is ignored.
+- **Name:** a text box and an **append** button. Clicking append, or pressing Enter in the box, adds the name to the end of the list and clears the box. A blank name is ignored, and from Build 5 on, so is a name already in the list.
 - **Name List:** a table with the columns **No.** (1, 2, 3, …) and **Name**. When it is empty, it says "No names yet".
 - Each row ends in buttons, one kind more per build: **delete** (Build 2); **up** and **down**, which swap the row with its neighbor (Build 3); and **edit**, which turns the name into a text box, where leaving the box or pressing Enter saves the new name (Build 4).
 
@@ -31,7 +35,7 @@ From the repo root:
 mkdir -p .temp/name-list && cp -r vendor .temp/name-list/
 ```
 
-Then create `.temp/name-list/index.html`, the same for all four builds:
+Then create `.temp/name-list/index.html`, the same for all six builds:
 
 ```html
 <!doctype html>
@@ -126,7 +130,7 @@ effect(() => {
 });
 ```
 
-- **The model is one signal holding an array,** and `updateModel(cmd)` is the only code that writes it. `cmd` is an object that says what to do, such as `{ type: 'append', name: 'Ann' }`, and the `switch` on `cmd.type` picks the rule for it. Each build adds one `case`. The dot runner works the same way: its `model.update(cmd)` is the one function that changes its state.
+- **The model is one signal holding an array,** and `updateModel(cmd)` is the only code that writes it. `cmd` is an object that says what to do, such as `{ type: 'append', name: 'Ann' }`, and the `switch` on `cmd.type` picks the rule for it. Builds 2 to 4 each add one `case`. The dot runner works the same way: its `model.update(cmd)` is the one function that changes its state.
 - `cmd.name.trim()` removes spaces from both ends, so a name of only spaces becomes `''` and is ignored. The braces after `case 'append':` give `name` a scope of its own; without them, a `const` in one `case` is visible in the whole `switch`.
 - **`[...names, name]` makes a new array:** `...names` copies the old names into the new array, and `name` goes on the end. Why not `names.push(name)`: `push` changes the array in place, so the signal would still hold the same array, and a signal notifies only when it is given a *different* value (compared with `!==`). Assigning the same array back does nothing, and the page never redraws. The last **Try it** shows this.
 - **The form section is plain DOM,** as in STUDY_PLAN_1: the form never changes, so lit-html has nothing to do there. Its `submit` listener runs when you click append and when you press Enter in the box. `e.preventDefault()` cancels what the browser would do next: send the form to the server and load the reply, which reloads the page and wipes the list.
@@ -418,6 +422,234 @@ What changed from Build 3:
 - Edit again and press Enter instead: the same.
 - Edit, clear the box and press Enter: `Anna` stays.
 - Edit `Bob`, then click up on his row without leaving the box first: the new name is saved, then the row moves.
+
+## Build 5: no duplicates, with includes
+
+**Read:** MDN [`Array.prototype.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes).
+
+**Code:** replace `.temp/name-list/main.js` with:
+
+```js
+import { signal, effect, batch } from '@preact/signals-core';
+import { html, render } from 'lit-html';
+
+// Model state: the names, in order
+const model = { names: signal([]) };
+
+// Update model: the only code that writes model.names; cmd says what to do
+function updateModel(cmd) {
+  const names = model.names.value;
+  const name = cmd.name?.trim();   // append and rename carry a name; for delete and move, ?. gives undefined
+  if (name === '') return;                                  // a blank name changes nothing,
+  if (name !== undefined && names.includes(name)) return;   // nor does one already in the list
+  switch (cmd.type) {
+    case 'append':
+      model.names.value = [...names, name];   // a new array, not push: see Build 1's notes
+      break;
+    case 'delete':
+      model.names.value = names.filter((_, i) => i !== cmd.index);   // keep every name but the one at cmd.index
+      break;
+    case 'move': {
+      const i = cmd.index, j = cmd.index + cmd.by;   // by is -1 (up) or +1 (down)
+      if (j < 0 || j >= names.length) break;          // the first name can't go up, nor the last down
+      model.names.value = names.with(i, names[j]).with(j, names[i]);   // swap the two
+      break;
+    }
+    case 'rename':
+      model.names.value = names.with(cmd.index, name);
+      break;
+  }
+}
+
+// --------------- name form
+const nameForm = document.querySelector('#name-form');
+const nameBox = document.querySelector('#name-box');
+nameForm.addEventListener('submit', e => {
+  e.preventDefault();   // a form's default is to send itself to the server, which reloads the page
+  updateModel({ type: 'append', name: nameBox.value });
+  nameBox.value = '';
+});
+
+// --------------- name list
+const nameRows = document.querySelector('#name-rows');
+const editing = signal(null);   // the view's own state: the index of the row being edited, or null
+
+function onEdit(i) {
+  editing.value = i;                         // the effect re-renders before this line returns,
+  nameRows.querySelector('input').focus();   // so the text box exists; focusing it means leaving it commits
+}
+
+function onEditDone(i, e) {
+  batch(() => {
+    updateModel({ type: 'rename', index: i, name: e.target.value });
+    editing.value = null;
+  });
+}
+
+function onEditKey(e) {
+  if (e.key === 'Enter') e.target.blur();   // Enter commits too, by leaving the box
+}
+
+function row(name, i, names) {
+  return html`<tr>
+    <td>${i + 1}</td>
+    <td>${i === editing.value
+      ? html`<input value=${name} @blur=${e => onEditDone(i, e)} @keydown=${onEditKey}>`
+      : name}</td>
+    <td>
+      <button ?disabled=${i === 0} @click=${() => updateModel({ type: 'move', index: i, by: -1 })}>up</button>
+      <button ?disabled=${i === names.length - 1} @click=${() => updateModel({ type: 'move', index: i, by: 1 })}>down</button>
+      <button @click=${() => onEdit(i)}>edit</button>
+      <button @click=${() => updateModel({ type: 'delete', index: i })}>delete</button>
+    </td>
+  </tr>`;
+}
+
+effect(() => {
+  const names = model.names.value;
+  console.log('render');
+  render(names.length === 0 ? html`<tr><td colspan="2">No names yet</td></tr>` : names.map(row), nameRows);
+});
+```
+
+- **`names.includes(name)` returns `true` if some item of the array equals `name`,** and `false` if none does. It checks the items in order, from the first, and stops at the first match. So a name that isn't in the list costs one comparison per name, since only after the last one can it say no: with 1,000 names, 1,000 comparisons. In C, it is the `for` loop with `strcmp` that you would write yourself.
+- **It compares as `===` does.** (Strictly, it uses *SameValueZero*, which differs from `===` only in counting `NaN` as equal to itself; no name is a number, so that doesn't matter here.) Two strings are equal when they hold the same characters in the same order, case included, so `Ann` and `ann` are different names. `trim()` runs first, so `  Ann  ` counts as `Ann`.
+- **One rule for append and rename.** The new check sits under the blank check, at the top of `updateModel`, so it covers both, as the blank check has since Build 4. A rename to a taken name leaves the old name, as a blank rename does. Leaving the box unchanged is a rename to the row's own name, which is taken, so nothing is written; the box still closes, because `onEditDone` writes `editing`.
+- `name !== undefined` skips the search for delete and move, which carry no name. They would work without it, since no item in the list is `undefined`, but they would search the whole list for nothing.
+- **The rule lives in the model.** The view and the controller are Build 4's, unchanged. Which names may be in the list is a rule about the state, so it goes in `updateModel`, the one function that writes the state. Like the end guard in `move` (Build 3), it then holds whatever the view does.
+- **The box empties even when a name is refused,** as it does for a blank name: the submit handler clears it after every append, whatever the model did.
+
+What changed from Build 4:
+
+1. `updateModel` has a second check at the top, `names.includes(name)`.
+
+**Try it,** with the console open:
+
+- Append `Ann`, then `Ann` again: still one row, and the second append logs no `render`.
+- Append `ann`: a second row.
+- Append `  Ann  `: refused, since `trim` runs before the check.
+- Click edit on `ann`, change it to `Ann` and press Enter: the box closes on `ann`.
+
+## Build 6: no duplicates, with a Set
+
+**Read:**
+
+1. MDN [`Set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set): the introduction and the [Description](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set#description), whose [Performance](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set#performance) part compares `has` with `includes`.
+2. MDN [`Set.prototype.has`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set/has).
+3. STUDY_PLAN_1's [Build 2: computed](STUDY_PLAN_1.md#build-2-computed), if you need a refresher.
+
+**Code:** replace `.temp/name-list/main.js` with:
+
+```js
+import { signal, computed, effect, batch } from '@preact/signals-core';
+import { html, render } from 'lit-html';
+
+// Model state: the names, in order
+const model = { names: signal([]) };
+
+// Derived value: the names as a Set, which finds a name without searching
+const taken = computed(() => {
+  console.log('taken');
+  return new Set(model.names.value);
+});
+
+// Update model: the only code that writes model.names; cmd says what to do
+function updateModel(cmd) {
+  const names = model.names.value;
+  const name = cmd.name?.trim();   // append and rename carry a name; for delete and move, ?. gives undefined
+  if (name === '') return;                                   // a blank name changes nothing,
+  if (name !== undefined && taken.value.has(name)) return;   // nor does one already in the list
+  switch (cmd.type) {
+    case 'append':
+      model.names.value = [...names, name];   // a new array, not push: see Build 1's notes
+      break;
+    case 'delete':
+      model.names.value = names.filter((_, i) => i !== cmd.index);   // keep every name but the one at cmd.index
+      break;
+    case 'move': {
+      const i = cmd.index, j = cmd.index + cmd.by;   // by is -1 (up) or +1 (down)
+      if (j < 0 || j >= names.length) break;          // the first name can't go up, nor the last down
+      model.names.value = names.with(i, names[j]).with(j, names[i]);   // swap the two
+      break;
+    }
+    case 'rename':
+      model.names.value = names.with(cmd.index, name);
+      break;
+  }
+}
+
+// --------------- name form
+const nameForm = document.querySelector('#name-form');
+const nameBox = document.querySelector('#name-box');
+nameForm.addEventListener('submit', e => {
+  e.preventDefault();   // a form's default is to send itself to the server, which reloads the page
+  updateModel({ type: 'append', name: nameBox.value });
+  nameBox.value = '';
+});
+
+// --------------- name list
+const nameRows = document.querySelector('#name-rows');
+const editing = signal(null);   // the view's own state: the index of the row being edited, or null
+
+function onEdit(i) {
+  editing.value = i;                         // the effect re-renders before this line returns,
+  nameRows.querySelector('input').focus();   // so the text box exists; focusing it means leaving it commits
+}
+
+function onEditDone(i, e) {
+  batch(() => {
+    updateModel({ type: 'rename', index: i, name: e.target.value });
+    editing.value = null;
+  });
+}
+
+function onEditKey(e) {
+  if (e.key === 'Enter') e.target.blur();   // Enter commits too, by leaving the box
+}
+
+function row(name, i, names) {
+  return html`<tr>
+    <td>${i + 1}</td>
+    <td>${i === editing.value
+      ? html`<input value=${name} @blur=${e => onEditDone(i, e)} @keydown=${onEditKey}>`
+      : name}</td>
+    <td>
+      <button ?disabled=${i === 0} @click=${() => updateModel({ type: 'move', index: i, by: -1 })}>up</button>
+      <button ?disabled=${i === names.length - 1} @click=${() => updateModel({ type: 'move', index: i, by: 1 })}>down</button>
+      <button @click=${() => onEdit(i)}>edit</button>
+      <button @click=${() => updateModel({ type: 'delete', index: i })}>delete</button>
+    </td>
+  </tr>`;
+}
+
+effect(() => {
+  const names = model.names.value;
+  console.log('render');
+  render(names.length === 0 ? html`<tr><td colspan="2">No names yet</td></tr>` : names.map(row), nameRows);
+});
+```
+
+- **A Set** is a collection in which each value appears at most once. `new Set(array)` builds one from the array's items, and `set.has(x)` returns `true` if `x` is in it. It compares as `includes` does.
+- **`has` finds a name without searching.** The engine turns each name into a number, its *hash*, with a fixed recipe that mixes the name's characters, and keeps the name in the slot of a table that the hash picks. To check a name, it hashes the name and looks only in that slot. So a lookup costs about the same with 10 names as with 10,000: hashing reads the name's characters, so a long name takes a little longer, but how many names there are doesn't matter. "About", because two names can land in the same slot (a *collision*), and the engine then compares the few names there. The JavaScript standard requires that lookups take, on average, time that grows slower than the number of names, and names hash tables as one way to get it ([ECMAScript, Set Objects](https://tc39.es/ecma262/#sec-set-objects)).
+- An analogy: a RAM whose address is the name's hash. Reading one address takes one access, however many words are stored. Where it breaks down: two names can share an address, so each address holds a short list of names, not one word.
+- **`new Set(model.names.value)`, not `new Set(model.names)`.** The signal is the box, and `.value` is the array in it. `new Set` needs something it can walk through item by item, such as an array, and a signal isn't one: `new Set(model.names)` throws `TypeError: object is not iterable`. Reading `.value` inside the computed is also what ties `taken` to `names`.
+- **`taken` is a computed, so one Set serves every check until `names` changes.** `updateModel` reads it from an event handler, outside any effect, and a computed caches there too: on each read it checks whether `names` changed since its last run, and runs its function again only if so. Its `console.log` shows each run. It sits right after the model, next to its only reader, `updateModel`.
+- `name !== undefined` now also keeps delete and move from reading `taken`, which would rebuild the Set for them after every change, for nothing.
+- **When the Set pays off.** Building a Set visits every name, as `includes` does. Here every accepted append or rename changes `names`, so the next check builds a new Set: one check per change costs what `includes` costs, plus the work of building. The Set wins when many checks share one build. Example: finding which of 100 pasted names are new, before adding any, against a list of 10,000. With `includes`, that is up to 100 × 10,000 = 1,000,000 comparisons; with the Set, 10,000 steps to build it and 100 lookups, about 10,100. At this app's size neither is measurable: the build is here to show the pattern.
+
+What changed from Build 5:
+
+1. `computed` joined the import.
+2. `taken`, a computed, holds the names as a Set.
+3. The second check reads `taken.value.has(name)` instead of `names.includes(name)`.
+
+**Try it,** with the console open:
+
+- Reload: one `render`, and no `taken`. Nothing has read `taken` yet, so its function hasn't run.
+- Append `Ann`: `taken`, then `render`. The check built the Set, still empty, and then the append redrew.
+- Append `Ann` again: `taken`, and no `render`. `names` changed since the last check, so the Set was built again, now holding `Ann`, and the check refused her.
+- Append `Ann` a third time: nothing is logged. `names` hasn't changed, so the last Set answers.
+- Delete `Ann`: `render`, and no `taken`. Append `Ann`: `taken`, then `render`. She is accepted, because the Set was built again from the new list.
 
 ## Next
 
